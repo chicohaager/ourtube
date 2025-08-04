@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  ourtube:
+    build: .
+    container_name: ourtube-prod
+    ports:
+      - "80:8000"  # Map to port 80 for web access
+    volumes:
+      - ./downloads:/app/downloads
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - DOWNLOAD_DIR=/app/downloads
+      - MAX_CONCURRENT_DOWNLOADS=5  # Higher for production
+      - ENVIRONMENT=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Nginx reverse proxy for better performance
+  nginx:
+    image: nginx:alpine
+    container_name: ourtube-nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - ourtube
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ourtube-redis-prod
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:

@@ -1,0 +1,73 @@
+# Production Dockerfile with multi-stage build and security optimizations
+FROM node:20-alpine AS frontend-builder
+
+# Install dependencies for node-gyp
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app/frontend
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies with exact versions
+RUN npm ci --only=production
+
+# Copy source code
+COPY frontend/ ./
+
+# Build with production optimizations
+RUN npm run build
+
+# Backend stage
+FROM python:3.12-slim AS backend
+
+# Security: Run as non-root user
+RUN useradd -m -u 1001 ourtube && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        curl \
+        && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir gunicorn
+
+# Copy backend code
+COPY --chown=ourtube:ourtube backend/ ./backend/
+
+# Copy frontend build
+COPY --from=frontend-builder --chown=ourtube:ourtube /app/frontend/dist ./frontend/dist
+
+# Create necessary directories
+RUN mkdir -p /app/downloads /app/logs /app/config && \
+    chown -R ourtube:ourtube /app
+
+# Switch to non-root user
+USER ourtube
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=production \
+    LOG_LEVEL=INFO
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Use gunicorn for production
+CMD ["gunicorn", "backend.main:app", \
+     "--workers", "4", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8000", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info"]

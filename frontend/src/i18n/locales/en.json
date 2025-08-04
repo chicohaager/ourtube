@@ -1,0 +1,110 @@
+{
+  "app": {
+    "title": "Video & Audio Downloader",
+    "subtitle": "Video & Audio Downloader",
+    "description": "Download videos and audio from YouTube and other platforms"
+  },
+  "download": {
+    "title": "Download Video",
+    "urlPlaceholder": "Enter video URL (YouTube, Vimeo, etc.)",
+    "audioOnly": "Audio only",
+    "audioFormat": "Audio Format",
+    "downloadButton": "Download",
+    "downloading": "Downloading...",
+    "completed": "Completed",
+    "failed": "Failed",
+    "pending": "Pending",
+    "cancel": "Cancel",
+    "retry": "Retry"
+  },
+  "queue": {
+    "title": "Downloads",
+    "noDownloads": "No downloads yet. Add a URL above to get started!",
+    "clearCompleted": "Clear Completed",
+    "clearAll": "Clear History",
+    "cancelDownload": "Cancel download",
+    "downloadCancelled": "Download cancelled",
+    "failedToCancel": "Failed to cancel download",
+    "historyCleared": "Download history cleared",
+    "failedToClearHistory": "Failed to clear history"
+  },
+  "status": {
+    "queued": "Queued",
+    "downloading": "Downloading",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "error": "Error",
+    "started": "Started",
+    "completedAt": "Completed"
+  },
+  "serverStatus": {
+    "active": "Active",
+    "downloads": "Downloads",
+    "openFolder": "Open download folder",
+    "changeFolder": "Change download folder",
+    "ffmpegNotInstalled": "ffmpeg not installed",
+    "ffmpegInstalled": "ffmpeg",
+    "ytdlpVersion": "yt-dlp",
+    "autoUpdate": "Auto-update",
+    "platform": "Platform",
+    "version": "version",
+    "updateAvailable": "update available",
+    "upToDate": "up to date",
+    "clickToInstall": "click to install"
+  },
+  "dialogs": {
+    "changeDirectory": {
+      "title": "Change Download Directory",
+      "label": "Download Directory",
+      "helper": "Enter the full path to the download directory",
+      "cancel": "Cancel",
+      "change": "Change"
+    },
+    "ffmpegInstallation": {
+      "title": "FFmpeg Not Installed",
+      "description": "FFmpeg is required for audio extraction and some video formats. OurTube functionality will be limited without it.",
+      "afterInstall": "After installing FFmpeg, click \"Check Installation\" to detect it automatically.",
+      "detectedPlatform": "Detected Platform",
+      "recommendedMethod": "Recommended installation method:",
+      "downloadButton": "Download FFmpeg",
+      "checkButton": "Check Installation",
+      "checking": "Checking...",
+      "dontShowAgain": "Don't show again",
+      "close": "Close"
+    }
+  },
+  "language": {
+    "english": "English",
+    "german": "Deutsch",
+    "switchTo": "Switch to {{language}}"
+  },
+  "progress": {
+    "speed": "Speed",
+    "eta": "ETA"
+  },
+  "videoInfo": {
+    "uploader": "Uploader",
+    "duration": "Duration"
+  },
+  "notifications": {
+    "downloadStarted": "Download started",
+    "downloadCompleted": "Download completed",
+    "downloadFailed": "Download failed",
+    "directoryUpdated": "Download directory updated",
+    "folderOpening": "Opening download folder...",
+    "folderOpenFailed": "Failed to open download folder",
+    "ytdlpUpdateTriggered": "yt-dlp update triggered",
+    "ytdlpUpdateFailed": "Failed to update yt-dlp",
+    "ffmpegUpdateTriggered": "ffmpeg update triggered",
+    "ffmpegUpdateFailed": "Failed to update ffmpeg",
+    "configReloaded": "Configuration reloaded!",
+    "configReloadFailed": "Failed to reload configuration",
+    "ffmpegDetected": "FFmpeg detected successfully!",
+    "ffmpegNotDetected": "FFmpeg still not detected. Please check your installation.",
+    "commandCopied": "Command copied to clipboard",
+    "videoInfoRetrieved": "Video information retrieved",
+    "videoInfoFailed": "Failed to get video information"
+  }
+}
