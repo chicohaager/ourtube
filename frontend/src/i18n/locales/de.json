@@ -1,0 +1,110 @@
+{
+  "app": {
+    "title": "Video & Audio Downloader",
+    "subtitle": "Video & Audio Downloader",
+    "description": "Laden Sie Videos und Audio von YouTube und anderen Plattformen herunter"
+  },
+  "download": {
+    "title": "Video herunterladen",
+    "urlPlaceholder": "Video-URL eingeben (YouTube, Vimeo, etc.)",
+    "audioOnly": "Nur Audio",
+    "audioFormat": "Audio-Format",
+    "downloadButton": "Herunterladen",
+    "downloading": "Lade herunter...",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "pending": "Warteschlange",
+    "cancel": "Abbrechen",
+    "retry": "Wiederholen"
+  },
+  "queue": {
+    "title": "Downloads",
+    "noDownloads": "Noch keine Downloads. Fügen Sie oben eine URL hinzu, um zu beginnen!",
+    "clearCompleted": "Abgeschlossene löschen",
+    "clearAll": "Verlauf löschen",
+    "cancelDownload": "Download abbrechen",
+    "downloadCancelled": "Download abgebrochen",
+    "failedToCancel": "Download konnte nicht abgebrochen werden",
+    "historyCleared": "Download-Verlauf gelöscht",
+    "failedToClearHistory": "Verlauf konnte nicht gelöscht werden"
+  },
+  "status": {
+    "queued": "Warteschlange",
+    "downloading": "Wird heruntergeladen",
+    "processing": "In Bearbeitung",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen",
+    "error": "Fehler",
+    "started": "Gestartet",
+    "completedAt": "Abgeschlossen"
+  },
+  "serverStatus": {
+    "active": "Aktiv",
+    "downloads": "Downloads",
+    "openFolder": "Download-Ordner öffnen",
+    "changeFolder": "Download-Ordner ändern",
+    "ffmpegNotInstalled": "ffmpeg nicht installiert",
+    "ffmpegInstalled": "ffmpeg",
+    "ytdlpVersion": "yt-dlp",
+    "autoUpdate": "Auto-Update",
+    "platform": "Plattform",
+    "version": "Version",
+    "updateAvailable": "Update verfügbar",
+    "upToDate": "aktuell",
+    "clickToInstall": "zum Installieren klicken"
+  },
+  "dialogs": {
+    "changeDirectory": {
+      "title": "Download-Verzeichnis ändern",
+      "label": "Download-Verzeichnis",
+      "helper": "Geben Sie den vollständigen Pfad zum Download-Verzeichnis ein",
+      "cancel": "Abbrechen",
+      "change": "Ändern"
+    },
+    "ffmpegInstallation": {
+      "title": "FFmpeg nicht installiert",
+      "description": "FFmpeg wird für Audio-Extraktion und einige Video-Formate benötigt. Die OurTube-Funktionalität ist ohne FFmpeg eingeschränkt.",
+      "afterInstall": "Klicken Sie nach der Installation von FFmpeg auf \"Installation prüfen\", um es automatisch zu erkennen.",
+      "detectedPlatform": "Erkannte Plattform",
+      "recommendedMethod": "Empfohlene Installationsmethode:",
+      "downloadButton": "FFmpeg herunterladen",
+      "checkButton": "Installation prüfen",
+      "checking": "Prüfe...",
+      "dontShowAgain": "Nicht mehr anzeigen",
+      "close": "Schließen"
+    }
+  },
+  "language": {
+    "english": "English",
+    "german": "Deutsch",
+    "switchTo": "Wechseln zu {{language}}"
+  },
+  "progress": {
+    "speed": "Geschwindigkeit",
+    "eta": "Verbleibende Zeit"
+  },
+  "videoInfo": {
+    "uploader": "Hochgeladen von",
+    "duration": "Dauer"
+  },
+  "notifications": {
+    "downloadStarted": "Download gestartet",
+    "downloadCompleted": "Download abgeschlossen",
+    "downloadFailed": "Download fehlgeschlagen",
+    "directoryUpdated": "Download-Verzeichnis aktualisiert",
+    "folderOpening": "Öffne Download-Ordner...",
+    "folderOpenFailed": "Fehler beim Öffnen des Download-Ordners",
+    "ytdlpUpdateTriggered": "yt-dlp Update ausgelöst",
+    "ytdlpUpdateFailed": "yt-dlp Update fehlgeschlagen",
+    "ffmpegUpdateTriggered": "ffmpeg Update ausgelöst",
+    "ffmpegUpdateFailed": "ffmpeg Update fehlgeschlagen",
+    "configReloaded": "Konfiguration neu geladen!",
+    "configReloadFailed": "Fehler beim Neuladen der Konfiguration",
+    "ffmpegDetected": "FFmpeg erfolgreich erkannt!",
+    "ffmpegNotDetected": "FFmpeg immer noch nicht erkannt. Bitte überprüfen Sie Ihre Installation.",
+    "commandCopied": "Befehl in Zwischenablage kopiert",
+    "videoInfoRetrieved": "Video-Informationen abgerufen",
+    "videoInfoFailed": "Video-Informationen konnten nicht abgerufen werden"
+  }
+}

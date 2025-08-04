@@ -1,0 +1,44 @@
+{
+  "name": "ourtube-frontend",
+  "version": "1.0.0",
+  "description": "Modern video & audio downloader frontend built with React and TypeScript",
+  "author": "chicohaager",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chicohaager/ourtube.git"
+  },
+  "homepage": "https://github.com/chicohaager/ourtube",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "@mui/material": "^6.3.2",
+    "@mui/icons-material": "^6.3.2",
+    "axios": "^1.7.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.5.0",
+    "zustand": "^5.0.3",
+    "date-fns": "^4.1.0",
+    "react-i18next": "^15.0.3",
+    "i18next": "^24.0.5",
+    "i18next-browser-languagedetector": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitejs/plugin-react": "^4.3.5",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext ts,tsx"
+  }
+}

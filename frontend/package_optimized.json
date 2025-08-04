@@ -1,0 +1,55 @@
+{
+  "name": "ourtube-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@emotion/react": "^11.13.5",
+    "@emotion/styled": "^11.13.5",
+    "@mui/material": "^6.3.2",
+    "@mui/icons-material": "^6.3.2",
+    "axios": "^1.7.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.5.0",
+    "zustand": "^5.0.3",
+    "date-fns": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "@vitejs/plugin-react": "^4.3.5",
+    "eslint": "^9.18.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.7",
+    "vite-bundle-analyzer": "^0.11.0",
+    "terser": "^5.36.0",
+    "babel-plugin-react-remove-properties": "^0.3.0"
+  },
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc && vite build",
+    "build:analyze": "tsc && vite build --mode analyze",
+    "preview": "vite preview --host",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src --ext ts,tsx --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules/.vite",
+    "analyze": "npx vite-bundle-analyzer",
+    "build:prod": "NODE_ENV=production npm run build"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

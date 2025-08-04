@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  ourtube:
+    build: .
+    container_name: ourtube
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./config:/app/config
+    environment:
+      - DOWNLOAD_DIR=/app/downloads
+      - MAX_CONCURRENT_DOWNLOADS=3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ourtube-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:
