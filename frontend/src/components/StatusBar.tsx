@@ -285,7 +285,7 @@ export const StatusBar: React.FC = () => {
             {t('dialogs.confirmDirectoryChange.warning')}
           </Typography>
           <Box component="ul" sx={{ pl: 2, m: 0 }}>
-            {t('dialogs.confirmDirectoryChange.details', { returnObjects: true }).map((detail: string, index: number) => (
+            {(t('dialogs.confirmDirectoryChange.details', { returnObjects: true }) as string[]).map((detail: string, index: number) => (
               <Typography component="li" variant="body2" key={index} sx={{ mb: 0.5 }}>
                 {detail}
               </Typography>
