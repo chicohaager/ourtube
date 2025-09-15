@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { DownloadRequest, DownloadStatus, VideoInfo, ServerConfig } from '../types';
+import { DownloadRequest, DownloadStatus, VideoInfo, ServerConfig, DirectoryBrowseResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -43,6 +43,11 @@ export const downloadAPI = {
 
   openDownloadDir: async () => {
     const response = await api.post('/open-download-dir');
+    return response.data;
+  },
+
+  browseDirectories: async (path: string = '/') => {
+    const response = await api.get<DirectoryBrowseResponse>('/browse-directories', { params: { path } });
     return response.data;
   },
 

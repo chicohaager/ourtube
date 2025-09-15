@@ -22,16 +22,20 @@ import Cancel from '@mui/icons-material/Cancel';
 import Download from '@mui/icons-material/Download';
 import ContentCopy from '@mui/icons-material/ContentCopy';
 import RestartAlt from '@mui/icons-material/RestartAlt';
+import Warning from '@mui/icons-material/Warning';
 import { downloadAPI } from '../api';
 import { ServerConfig } from '../types';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import { DirectoryPicker } from './DirectoryPicker';
 
 export const StatusBar: React.FC = () => {
   const { t } = useTranslation();
   const [config, setConfig] = useState<ServerConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [directoryPickerOpen, setDirectoryPickerOpen] = useState(false);
   const [newDirectory, setNewDirectory] = useState('');
   const [updatingYtdlp, setUpdatingYtdlp] = useState(false);
   const [updatingFfmpeg, setUpdatingFfmpeg] = useState(false);
@@ -89,6 +93,17 @@ export const StatusBar: React.FC = () => {
     } catch (error) {
       toast.error(t('notifications.folderOpenFailed'));
     }
+  };
+
+  const handleConfirmDirectoryChange = () => {
+    setConfirmDialogOpen(false);
+    setDirectoryPickerOpen(true);
+  };
+
+  const handleDirectorySelect = (directory: string) => {
+    setNewDirectory(directory);
+    setDirectoryPickerOpen(false);
+    setDialogOpen(true);
   };
 
   const handleChangeDirectory = async () => {
@@ -235,7 +250,7 @@ export const StatusBar: React.FC = () => {
             </Typography>
             
             <Tooltip title={t('serverStatus.changeFolder')}>
-              <IconButton size="small" onClick={() => setDialogOpen(true)}>
+              <IconButton size="small" onClick={() => setConfirmDialogOpen(true)}>
                 <Folder />
               </IconButton>
             </Tooltip>
@@ -255,6 +270,40 @@ export const StatusBar: React.FC = () => {
           </Box>
         </Box>
       </Paper>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialogOpen} onClose={() => setConfirmDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="warning" />
+          {t('dialogs.confirmDirectoryChange.title')}
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            {t('dialogs.confirmDirectoryChange.message')}
+          </Typography>
+          <Typography variant="subtitle2" color="warning.main" sx={{ mb: 1 }}>
+            {t('dialogs.confirmDirectoryChange.warning')}
+          </Typography>
+          <Box component="ul" sx={{ pl: 2, m: 0 }}>
+            {t('dialogs.confirmDirectoryChange.details', { returnObjects: true }).map((detail: string, index: number) => (
+              <Typography component="li" variant="body2" key={index} sx={{ mb: 0.5 }}>
+                {detail}
+              </Typography>
+            ))}
+          </Box>
+          <Typography variant="body1" sx={{ mt: 2, fontWeight: 'bold' }}>
+            {t('dialogs.confirmDirectoryChange.question')}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialogOpen(false)}>
+            {t('dialogs.confirmDirectoryChange.cancel')}
+          </Button>
+          <Button onClick={handleConfirmDirectoryChange} variant="contained" color="warning">
+            {t('dialogs.confirmDirectoryChange.confirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Directory Change Dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -366,6 +415,15 @@ export const StatusBar: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Directory Picker Dialog */}
+      <DirectoryPicker
+        open={directoryPickerOpen}
+        onClose={() => setDirectoryPickerOpen(false)}
+        onSelect={handleDirectorySelect}
+        currentPath={config?.download_dir || '/'}
+        title={t('dialogs.directoryPicker.title')}
+      />
     </>
   );
 };

@@ -14,25 +14,63 @@ import subprocess
 import logging
 from contextlib import asynccontextmanager
 import sys
+import re
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration from environment variables
-DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", "./downloads")
+DOWNLOAD_DIR = os.path.abspath(os.getenv("DOWNLOAD_DIR", "./downloads"))
 OUTPUT_TEMPLATE = os.getenv("OUTPUT_TEMPLATE", "%(title)s.%(ext)s")
 YTDL_UPDATE_INTERVAL = int(os.getenv("YTDL_UPDATE_INTERVAL", "86400"))  # 24 hours
 PROXY = os.getenv("PROXY", None)
 MAX_CONCURRENT_DOWNLOADS = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "3"))
 YTDL_OPTIONS = os.getenv("YTDL_OPTIONS", None)
 ENABLE_YTDL_UPDATE = os.getenv("ENABLE_YTDL_UPDATE", "true").lower() == "true"
-HISTORY_FILE = os.getenv("HISTORY_FILE", "./download_history.json")
+HISTORY_FILE = os.path.abspath(os.getenv("HISTORY_FILE", "./download_history.json"))
 MAX_HISTORY_SIZE = int(os.getenv("MAX_HISTORY_SIZE", "1000"))
 
 # Global variable to track active downloads
 active_downloads = 0
 download_semaphore = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
+
+def sanitize_filename(filename: str, max_length: int = 255) -> str:
+    """Sanitize filename to be safe for all operating systems"""
+    # Remove or replace invalid characters
+    # Windows reserved characters: < > : " / \ | ? *
+    # Unix/Linux mainly just null and /
+    invalid_chars = r'[<>:"|?*\/\x00-\x1f]' if sys.platform == 'win32' else r'[/\x00]'
+    filename = re.sub(invalid_chars, '_', filename)
+    
+    # Remove leading/trailing dots and spaces (Windows doesn't like these)
+    filename = filename.strip('. ')
+    
+    # Windows reserved names
+    if sys.platform == 'win32':
+        reserved_names = [
+            'CON', 'PRN', 'AUX', 'NUL',
+            'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+            'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+        ]
+        name_without_ext = filename.split('.')[0].upper()
+        if name_without_ext in reserved_names:
+            filename = f"_{filename}"
+    
+    # Truncate if too long (accounting for file extension)
+    if len(filename) > max_length:
+        name, ext = os.path.splitext(filename)
+        if ext:
+            max_name_length = max_length - len(ext)
+            filename = name[:max_name_length] + ext
+        else:
+            filename = filename[:max_length]
+    
+    # Fallback if filename is empty after sanitization
+    if not filename:
+        filename = "download"
+    
+    return filename
 
 # Simple in-memory cache for video info
 video_info_cache = {}
@@ -162,14 +200,23 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+            logger.info(f"WebSocket disconnected. Total connections: {len(self.active_connections)}")
 
     async def broadcast(self, message: dict):
+        """Broadcast message to all connected clients, removing dead connections"""
+        disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to send to websocket: {e}")
+                disconnected.append(connection)
+        
+        # Clean up disconnected clients
+        for conn in disconnected:
+            self.disconnect(conn)
 
 manager = ConnectionManager()
 downloads: Dict[str, DownloadStatus] = {}
@@ -275,11 +322,17 @@ class DownloadProgress:
                 )
         elif d['status'] == 'finished':
             downloads[self.download_id].status = 'processing'
-            downloads[self.download_id].filename = d.get('filename')
+            filename = d.get('filename')
+            if filename:
+                # Sanitize the filename to prevent issues
+                downloads[self.download_id].filename = sanitize_filename(os.path.basename(filename))
 
 def get_ydl_opts(request: DownloadRequest, download_id: str, loop=None):
     # Use custom or default output directory
     output_dir = request.output_dir or DOWNLOAD_DIR
+    
+    # Ensure we're using absolute paths
+    output_dir = os.path.abspath(output_dir)
     
     # Use custom or default output template
     template = request.output_template or OUTPUT_TEMPLATE
@@ -290,6 +343,8 @@ def get_ydl_opts(request: DownloadRequest, download_id: str, loop=None):
         'progress_hooks': [DownloadProgress(download_id, loop)],
         'quiet': True,
         'no_warnings': True,
+        'restrictfilenames': True,  # Sanitize filenames for all platforms
+        'windowsfilenames': True,   # Ensure Windows compatibility
     }
     
     # Add proxy if specified
@@ -309,7 +364,29 @@ def get_ydl_opts(request: DownloadRequest, download_id: str, loop=None):
             opts['format'] = request.audio_format_id
     # Handle quality selection  
     elif request.quality and not request.audio_only:
-        opts['format'] = request.quality
+        # Quality might be a format string from frontend like "bestvideo[height<=1080]+bestaudio/best"
+        # or a simple quality like "1080", "720", etc.
+        quality = request.quality
+        
+        # Check if it's a format string (contains brackets or +)
+        if '[' in quality or '+' in quality:
+            # It's already a format string from the frontend
+            opts['format'] = quality
+        else:
+            # Convert simple quality number to format string
+            quality_formats = {
+                '4k': 'bestvideo[height<=2160]+bestaudio/best',
+                '2160': 'bestvideo[height<=2160]+bestaudio/best',
+                '1440': 'bestvideo[height<=1440]+bestaudio/best',
+                '1080': 'bestvideo[height<=1080]+bestaudio/best',
+                '720': 'bestvideo[height<=720]+bestaudio/best',
+                '480': 'bestvideo[height<=480]+bestaudio/best',
+                '360': 'bestvideo[height<=360]+bestaudio/best',
+                '240': 'bestvideo[height<=240]+bestaudio/best',
+                'best': 'best',
+                'worst': 'worst'
+            }
+            opts['format'] = quality_formats.get(quality.lower(), 'best')
     elif request.audio_only:
         if not FFMPEG_AVAILABLE:
             raise Exception("Audio-only downloads require ffmpeg to be installed")
@@ -350,9 +427,18 @@ def get_ydl_opts(request: DownloadRequest, download_id: str, loop=None):
             }],
         })
     else:
-        # Use best single file format to avoid ffmpeg requirement when not available
-        if FFMPEG_AVAILABLE:
-            opts['format'] = request.format if request.format != 'best' else 'best'
+        # Handle format selection
+        if request.format:
+            # Check if format contains height filter which might cause issues
+            if '[height' in request.format and not FFMPEG_AVAILABLE:
+                # Height filters require ffmpeg for merging video+audio
+                # Fallback to simpler format
+                opts['format'] = 'best'
+                logger.warning("Height filter requested but ffmpeg not available, using 'best' format")
+            else:
+                opts['format'] = request.format
+        elif FFMPEG_AVAILABLE:
+            opts['format'] = 'best'
         else:
             # Without ffmpeg, prefer single file formats that don't need merging
             opts['format'] = 'best[ext=mp4]/best[ext=webm]/best'
@@ -840,9 +926,11 @@ async def set_download_directory(request: DirectoryRequest):
     """Set the download directory"""
     global DOWNLOAD_DIR
     try:
+        # Convert to absolute path
+        abs_dir = os.path.abspath(request.directory)
         # Validate directory exists or can be created
-        os.makedirs(request.directory, exist_ok=True)
-        DOWNLOAD_DIR = request.directory
+        os.makedirs(abs_dir, exist_ok=True)
+        DOWNLOAD_DIR = abs_dir
         return {"message": "Download directory updated", "download_dir": DOWNLOAD_DIR}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid directory: {str(e)}")
@@ -851,15 +939,99 @@ async def set_download_directory(request: DirectoryRequest):
 async def open_download_directory():
     """Open the download directory in the system file manager"""
     try:
+        # Ensure directory exists
+        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+        
+        # Use absolute path for all platforms
+        abs_path = os.path.abspath(DOWNLOAD_DIR)
+        
         if sys.platform == 'win32':
-            os.startfile(DOWNLOAD_DIR)
+            # Windows: use explorer.exe for better compatibility
+            subprocess.run(['explorer', abs_path], check=False)
         elif sys.platform == 'darwin':  # macOS
-            subprocess.run(['open', DOWNLOAD_DIR])
-        else:  # Linux
-            subprocess.run(['xdg-open', DOWNLOAD_DIR])
+            subprocess.run(['open', abs_path], check=False)
+        else:  # Linux/Unix
+            # Try multiple methods for Linux
+            try:
+                subprocess.run(['xdg-open', abs_path], check=True)
+            except subprocess.CalledProcessError:
+                # Fallback to other methods
+                for opener in ['gnome-open', 'kde-open', 'nautilus']:
+                    try:
+                        subprocess.run([opener, abs_path], check=True)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
         return {"message": "Download directory opened"}
     except Exception as e:
+        logger.error(f"Failed to open directory: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to open directory: {str(e)}")
+
+@app.get("/api/browse-directories")
+async def browse_directories(path: str = "/"):
+    """Browse directories for directory picker"""
+    try:
+        # Security: Normalize and validate path
+        path = os.path.normpath(path)
+
+        # On Windows, if no path is provided, start with root drives
+        if sys.platform == 'win32' and path in ['/', '\\']:
+            import string
+            drives = []
+            for drive in string.ascii_uppercase:
+                drive_path = f"{drive}:\\"
+                if os.path.exists(drive_path):
+                    drives.append({
+                        "name": f"{drive}:",
+                        "path": drive_path,
+                        "isDirectory": True,
+                        "isRoot": True
+                    })
+            return {"directories": drives, "currentPath": ""}
+
+        # Check if path exists and is accessible
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail="Path not found")
+
+        if not os.path.isdir(path):
+            raise HTTPException(status_code=400, detail="Path is not a directory")
+
+        directories = []
+
+        # Add parent directory option (except for root)
+        parent_path = os.path.dirname(path)
+        if path != parent_path and parent_path:
+            directories.append({
+                "name": "..",
+                "path": parent_path,
+                "isDirectory": True,
+                "isParent": True
+            })
+
+        # List directories only
+        try:
+            for item in sorted(os.listdir(path)):
+                item_path = os.path.join(path, item)
+                if os.path.isdir(item_path):
+                    # Skip hidden directories (starting with .)
+                    if not item.startswith('.'):
+                        directories.append({
+                            "name": item,
+                            "path": item_path,
+                            "isDirectory": True
+                        })
+        except PermissionError:
+            # If we can't read the directory, return what we have
+            pass
+
+        return {
+            "directories": directories,
+            "currentPath": path
+        }
+
+    except Exception as e:
+        logger.error(f"Directory browse error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to browse directory: {str(e)}")
 
 @app.get("/api/thumbnail")
 async def get_thumbnail_proxy(url: str):
