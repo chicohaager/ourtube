@@ -61,3 +61,16 @@ export interface ServerConfig {
   ytdlp_version: string;
   platform: string;
 }
+
+export interface DirectoryItem {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  isParent?: boolean;
+  isRoot?: boolean;
+}
+
+export interface DirectoryBrowseResponse {
+  directories: DirectoryItem[];
+  currentPath: string;
+}
