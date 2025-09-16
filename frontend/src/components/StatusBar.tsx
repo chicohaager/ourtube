@@ -43,6 +43,10 @@ export const StatusBar: React.FC = () => {
   const [ffmpegDialogDismissed, setFfmpegDialogDismissed] = useState(
     localStorage.getItem('ffmpegDialogDismissed') === 'true'
   );
+  const [ytdlpDialogOpen, setYtdlpDialogOpen] = useState(false);
+  const [ytdlpDialogDismissed, setYtdlpDialogDismissed] = useState(
+    localStorage.getItem('ytdlpDialogDismissed') === 'true'
+  );
   const [restarting, setRestarting] = useState(false);
 
   const fetchConfig = async () => {
@@ -55,6 +59,11 @@ export const StatusBar: React.FC = () => {
       if (!data.ffmpeg_available && !ffmpegDialogDismissed) {
         setFfmpegDialogOpen(true);
       }
+
+      // Show yt-dlp installation dialog if not installed and not dismissed
+      if (data.ytdlp_available === false && !ytdlpDialogDismissed) {
+        setYtdlpDialogOpen(true);
+      }
     } catch (error) {
       console.error('Config fetch error:', error);
       // For now, set dummy data so the UI works
@@ -66,6 +75,7 @@ export const StatusBar: React.FC = () => {
         active_downloads: 0,
         ytdl_auto_update: true,
         ytdlp_updates_available: false,
+        ytdlp_available: true,
         proxy: false,
         download_dir: './downloads',
         output_template: '%(title)s.%(ext)s',
@@ -158,6 +168,14 @@ export const StatusBar: React.FC = () => {
     }
   };
 
+  const handleDismissYtdlpDialog = (permanent: boolean) => {
+    setYtdlpDialogOpen(false);
+    if (permanent) {
+      localStorage.setItem('ytdlpDialogDismissed', 'true');
+      setYtdlpDialogDismissed(true);
+    }
+  };
+
   const getPlatformName = (platform: string) => {
     switch (platform) {
       case 'win32': return 'Windows';
@@ -172,16 +190,24 @@ export const StatusBar: React.FC = () => {
     try {
       const result = await downloadAPI.restart();
       toast.success(t('notifications.configReloaded'));
-      
-      // Refresh the config to get updated FFmpeg status
+
+      // Refresh the config to get updated status
       await fetchConfig();
-      
+
       // If FFmpeg is now available, close the dialog and show success
-      if (result.ffmpeg_available) {
+      if (result.ffmpeg_available && ffmpegDialogOpen) {
         setFfmpegDialogOpen(false);
         toast.success(t('notifications.ffmpegDetected'));
-      } else {
+      } else if (!result.ffmpeg_available && ffmpegDialogOpen) {
         toast.error(t('notifications.ffmpegNotDetected'));
+      }
+
+      // If yt-dlp is now available, close the dialog and show success
+      if (result.ytdlp_available && ytdlpDialogOpen) {
+        setYtdlpDialogOpen(false);
+        toast.success(t('notifications.ytdlpDetected'));
+      } else if (!result.ytdlp_available && ytdlpDialogOpen) {
+        toast.error(t('notifications.ytdlpNotDetected'));
       }
     } catch (error) {
       toast.error(t('notifications.configReloadFailed'));
@@ -219,14 +245,16 @@ export const StatusBar: React.FC = () => {
               />
             </Tooltip>
             
-            <Tooltip title={`${t('serverStatus.ytdlpVersion')} ${t('serverStatus.version')}: ${config.ytdlp_version}${config.ytdlp_updates_available ? ` (${t('serverStatus.updateAvailable')})` : ` (${t('serverStatus.upToDate')})`}`}>
+            <Tooltip title={config.ytdlp_available !== false ? `${t('serverStatus.ytdlpVersion')} ${t('serverStatus.version')}: ${config.ytdlp_version}${config.ytdlp_updates_available ? ` (${t('serverStatus.updateAvailable')})` : ` (${t('serverStatus.upToDate')})`}` : t('serverStatus.ytdlpNotInstalled') + ' - ' + t('serverStatus.clickToInstall')}>
               <Chip
-                icon={config.ytdlp_updates_available ? <Cancel /> : <CheckCircle />}
-                label={`yt-dlp ${config.ytdlp_version}`}
-                color={config.ytdlp_updates_available ? 'error' : 'success'}
+                icon={config.ytdlp_available === false ? <Cancel /> : (config.ytdlp_updates_available ? <Cancel /> : <CheckCircle />)}
+                label={config.ytdlp_available === false ? t('serverStatus.ytdlpNotInstalled') : `yt-dlp ${config.ytdlp_version}`}
+                color={config.ytdlp_available === false ? 'error' : (config.ytdlp_updates_available ? 'error' : 'success')}
                 size="small"
-                onDelete={config.ytdlp_updates_available || !config.ytdl_auto_update ? handleUpdateYtdlp : undefined}
+                onClick={config.ytdlp_available === false ? () => setYtdlpDialogOpen(true) : undefined}
+                onDelete={config.ytdlp_available !== false && (config.ytdlp_updates_available || !config.ytdl_auto_update) ? handleUpdateYtdlp : undefined}
                 deleteIcon={updatingYtdlp ? <CircularProgress size={16} /> : <Refresh />}
+                sx={{ cursor: config.ytdlp_available === false ? 'pointer' : 'default' }}
               />
             </Tooltip>
 
@@ -412,6 +440,96 @@ export const StatusBar: React.FC = () => {
           </Button>
           <Button onClick={() => handleDismissFfmpegDialog(false)}>
             {t('dialogs.ffmpegInstallation.close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* yt-dlp Installation Dialog */}
+      <Dialog
+        open={ytdlpDialogOpen}
+        onClose={() => handleDismissYtdlpDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <Cancel color="error" />
+            {t('dialogs.ytdlpInstallation.title')}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" paragraph>
+            {t('dialogs.ytdlpInstallation.description')}
+          </Typography>
+
+          <Typography variant="body2" color="text.secondary" paragraph>
+            {t('dialogs.ytdlpInstallation.afterInstall')}
+          </Typography>
+
+          <Typography variant="subtitle2" gutterBottom>
+            {t('dialogs.ytdlpInstallation.detectedPlatform')}: <strong>{getPlatformName(config.platform)}</strong>
+          </Typography>
+
+          {config.ytdlp_download_info && (
+            <>
+              {config.ytdlp_download_info.package_manager && (
+                <Box sx={{ mt: 2, mb: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {t('dialogs.ytdlpInstallation.recommendedMethod')}
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 2,
+                      bgcolor: 'grey.100',
+                      borderRadius: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <code style={{ flex: 1 }}>{config.ytdlp_download_info.package_manager}</code>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleCopyCommand(config.ytdlp_download_info!.package_manager!)}
+                    >
+                      <ContentCopy fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+              )}
+
+              <Typography variant="body2" paragraph sx={{ mt: 2 }}>
+                {config.ytdlp_download_info.instructions}
+              </Typography>
+
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  onClick={() => window.open(config.ytdlp_download_info!.url, '_blank')}
+                  size="large"
+                >
+                  {t('dialogs.ytdlpInstallation.downloadButton')}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={restarting ? <CircularProgress size={16} /> : <RestartAlt />}
+                  onClick={handleRestart}
+                  disabled={restarting}
+                  size="large"
+                >
+                  {restarting ? t('dialogs.ytdlpInstallation.checking') : t('dialogs.ytdlpInstallation.checkButton')}
+                </Button>
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => handleDismissYtdlpDialog(true)} color="secondary">
+            {t('dialogs.ytdlpInstallation.dontShowAgain')}
+          </Button>
+          <Button onClick={() => handleDismissYtdlpDialog(false)}>
+            {t('dialogs.ytdlpInstallation.close')}
           </Button>
         </DialogActions>
       </Dialog>

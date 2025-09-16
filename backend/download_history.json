@@ -1,26 +1,74 @@
 [
   {
-    "id": "6b25ef98-5616-4d00-bf0b-f692cebc1aae",
-    "url": "https://www.youtube.com/watch?v=RuuPXGy5ohw&list=RDRuuPXGy5ohw&start_radio=1",
+    "id": "72bf24f0-4bfd-4d16-a20c-ed5652aa70c1",
+    "url": "https://www.youtube.com/watch?v=RsGyDsDclvY",
     "status": "completed",
     "progress": 100,
-    "filename": "./downloads/HAEVN & Neco Novellas - Trade It For The Night (Live in Carr\u00e9).f251.webm",
+    "filename": "HAEVN_-_Bright_Lights_Upclose_Concert.mp4",
     "error": null,
-    "speed": "  23.24MiB/s",
+    "speed": "  20.59MiB/s",
     "eta": "00:00",
-    "created_at": "2025-08-04T17:28:16.950470",
-    "completed_at": "2025-08-04T17:28:44.315952"
+    "created_at": "2025-09-15T17:41:52.317937",
+    "completed_at": "2025-09-15T17:42:00.268269"
   },
   {
-    "id": "4003a988-0b47-41f6-8791-6b29bc4032da",
-    "url": "https://www.youtube.com/watch?v=05wtoKIPO-E&list=PL6n7xOfvov7BxD5egE-YkJ57A_yq5YOSA",
+    "id": "02cebaaa-0c1c-45d3-9641-6651b5764443",
+    "url": "https://www.youtube.com/watch?v=SWFDZ33ySJg",
     "status": "completed",
-    "progress": 100,
-    "filename": "./downloads/I'll Take The Blame.mp4",
+    "progress": 100.0,
+    "filename": "HAEVN_-_Other_Side_of_Sea_Symphonic_Tales.f251.webm",
     "error": null,
-    "speed": "  23.26MiB/s",
+    "speed": "  21.25MiB/s",
     "eta": "00:00",
-    "created_at": "2025-08-04T17:25:48.643604",
-    "completed_at": "2025-08-04T17:25:53.003539"
+    "created_at": "2025-09-15T17:07:20.739503",
+    "completed_at": "2025-09-15T17:07:34.602548"
+  },
+  {
+    "id": "a0362b5b-47e5-4c0d-8dd9-c029d34fac55",
+    "url": "https://www.youtube.com/watch?v=uJUe0xwjAW4",
+    "status": "completed",
+    "progress": 100.0,
+    "filename": "HAEVN_-_We_Are_Upclose_Concert.f251.webm",
+    "error": null,
+    "speed": "  24.21MiB/s",
+    "eta": "00:00",
+    "created_at": "2025-09-15T17:02:29.615520",
+    "completed_at": "2025-09-15T17:02:40.023289"
+  },
+  {
+    "id": "e750953f-6650-4742-9482-ecb74c34e3ca",
+    "url": "https://www.youtube.com/watch?v=uJUe0xwjAW4",
+    "status": "completed",
+    "progress": 100.0,
+    "filename": "HAEVN_-_We_Are_Upclose_Concert.mp4",
+    "error": null,
+    "speed": "  20.84MiB/s",
+    "eta": "00:00",
+    "created_at": "2025-09-15T17:01:21.704345",
+    "completed_at": "2025-09-15T17:01:30.088895"
+  },
+  {
+    "id": "11fa9fc7-e312-4b16-9061-b8e3f31a5eb6",
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "status": "completed",
+    "progress": 100.0,
+    "filename": null,
+    "error": null,
+    "speed": null,
+    "eta": null,
+    "created_at": "2025-09-15T16:06:12.156313",
+    "completed_at": "2025-09-15T16:06:16.201471"
+  },
+  {
+    "id": "ca41d84b-ceb4-4768-94c3-0fd9c3e64eb0",
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "status": "completed",
+    "progress": 100.0,
+    "filename": "Rick_Astley_-_Never_Gonna_Give_You_Up_Official_Video_4K_Remaster.f251.webm",
+    "error": null,
+    "speed": "  24.15MiB/s",
+    "eta": "00:00",
+    "created_at": "2025-09-15T16:05:46.985833",
+    "completed_at": "2025-09-15T16:05:53.857223"
   }
 ]

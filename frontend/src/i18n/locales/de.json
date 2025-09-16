@@ -46,6 +46,7 @@
     "changeFolder": "Download-Ordner ändern",
     "ffmpegNotInstalled": "ffmpeg nicht installiert",
     "ffmpegInstalled": "ffmpeg",
+    "ytdlpNotInstalled": "yt-dlp nicht installiert",
     "ytdlpVersion": "yt-dlp",
     "autoUpdate": "Auto-Update",
     "platform": "Plattform",
@@ -95,6 +96,18 @@
       "checking": "Prüfe...",
       "dontShowAgain": "Nicht mehr anzeigen",
       "close": "Schließen"
+    },
+    "ytdlpInstallation": {
+      "title": "yt-dlp nicht installiert",
+      "description": "yt-dlp ist die zentrale Download-Engine, die für die Funktion von OurTube erforderlich ist. Ohne yt-dlp können Sie keine Videos herunterladen.",
+      "afterInstall": "Klicken Sie nach der Installation von yt-dlp auf \"Installation prüfen\", um es automatisch zu erkennen.",
+      "detectedPlatform": "Erkannte Plattform",
+      "recommendedMethod": "Empfohlene Installationsmethode:",
+      "downloadButton": "yt-dlp herunterladen",
+      "checkButton": "Installation prüfen",
+      "checking": "Prüfe...",
+      "dontShowAgain": "Nicht mehr anzeigen",
+      "close": "Schließen"
     }
   },
   "language": {
@@ -125,6 +138,8 @@
     "configReloadFailed": "Fehler beim Neuladen der Konfiguration",
     "ffmpegDetected": "FFmpeg erfolgreich erkannt!",
     "ffmpegNotDetected": "FFmpeg immer noch nicht erkannt. Bitte überprüfen Sie Ihre Installation.",
+    "ytdlpDetected": "yt-dlp erfolgreich erkannt!",
+    "ytdlpNotDetected": "yt-dlp immer noch nicht erkannt. Bitte überprüfen Sie Ihre Installation.",
     "commandCopied": "Befehl in Zwischenablage kopiert",
     "videoInfoRetrieved": "Video-Informationen abgerufen",
     "videoInfoFailed": "Video-Informationen konnten nicht abgerufen werden"
