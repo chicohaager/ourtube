@@ -130,6 +130,7 @@
     "directoryUpdated": "Download-Verzeichnis aktualisiert",
     "folderOpening": "Öffne Download-Ordner...",
     "folderOpenFailed": "Fehler beim Öffnen des Download-Ordners",
+    "downloadPath": "Download-Pfad",
     "ytdlpUpdateTriggered": "yt-dlp Update ausgelöst",
     "ytdlpUpdateFailed": "yt-dlp Update fehlgeschlagen",
     "ffmpegUpdateTriggered": "ffmpeg Update ausgelöst",
