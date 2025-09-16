@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  ourtube:
+    image: chicohaager/ourtube:latest
+    container_name: ourtube
+    ports:
+      - "8000:8000"
+    volumes:
+      # ZimaOS optimized paths
+      - /DATA/Media/Downloads/OurTube:/app/downloads
+      - /DATA/AppData/ourtube/config:/app/config
+      - /DATA/AppData/ourtube/logs:/app/logs
+    environment:
+      - DOWNLOAD_DIR=/app/downloads
+      - MAX_CONCURRENT_DOWNLOADS=4
+      - YT_DLP_UPDATE_ENABLED=true
+      - YT_DLP_UPDATE_INTERVAL=86400
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=*
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS=100
+      - RATE_LIMIT_WINDOW=60
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health || http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      # Enhanced ZimaOS CasaOS labels
+      - "org.label-schema.name=OurTube"
+      - "org.label-schema.description=Modern video & audio downloader supporting YouTube and 1000+ sites"
+      - "org.label-schema.url=https://github.com/chicohaager/ourtube"
+      - "org.label-schema.vcs-url=https://github.com/chicohaager/ourtube"
+      - "org.label-schema.version=latest"
+      - "org.label-schema.schema-version=1.0"
+      - "org.label-schema.build-date=2024-08-04"
+      - "casa.app.category=Media"
+      - "casa.app.port.web=8000"
+      - "casa.app.title=OurTube Video Downloader"
+      - "casa.app.index=/docs"
+      - "casa.app.author=ChicoHaager"
+      - "casa.icon=https://raw.githubusercontent.com/chicohaager/ourtube/main/logo.png"
+    networks:
+      - ourtube-network
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: ourtube-redis
+    volumes:
+      - /DATA/AppData/ourtube/redis:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    networks:
+      - ourtube-network
+
+  filebrowser:
+    image: filebrowser/filebrowser:v2.25.0
+    container_name: ourtube-filebrowser
+    ports:
+      - "8080:80"
+    volumes:
+      - /DATA/Media/Downloads/OurTube:/srv
+      - /DATA/AppData/ourtube/filebrowser:/database
+    environment:
+      - FB_DATABASE=/database/filebrowser.db
+      - FB_ROOT=/srv
+      - FB_LOG=stdout
+      - FB_NOAUTH=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    labels:
+      - "casa.app.category=Files"
+      - "casa.app.port.web=8080"
+      - "casa.app.title=OurTube File Browser"
+      - "casa.app.index=/files"
+    networks:
+      - ourtube-network
+
+  # Optional: Watchtower for automatic updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: ourtube-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Check daily
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_MONITOR_ONLY=false
+    restart: unless-stopped
+    command: --interval 86400 ourtube ourtube-redis ourtube-filebrowser
+    labels:
+      - "casa.app.category=System"
+      - "casa.app.title=OurTube Auto-Updater"
+
+networks:
+  ourtube-network:
+    driver: bridge
+    name: ourtube-network
+
+# ZimaOS Installation Instructions:
+# 1. Save this file as docker-compose.yml in your desired directory
+# 2. Create required directories: sudo mkdir -p /DATA/{Media/Downloads/OurTube,AppData/ourtube/{config,logs,redis,filebrowser}}
+# 3. Set permissions: sudo chown -R 1000:1000 /DATA/AppData/ourtube /DATA/Media/Downloads/OurTube
+# 4. Run: docker-compose up -d
+# 5. Access OurTube at: http://your-zima-ip:8000
+# 6. Access File Browser at: http://your-zima-ip:8080

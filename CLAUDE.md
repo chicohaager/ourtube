@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OurTube is a modern video downloader application (alternative to MeTube) that downloads videos from YouTube and 1000+ other sites using yt-dlp. It's a full-stack web application with React frontend and FastAPI backend.
+OurTube is a modern video downloader application that downloads videos from YouTube and 1000+ other sites using yt-dlp. It's a full-stack web application with React frontend and FastAPI backend, featuring real-time WebSocket communication for download progress updates.
 
 ## Commands
 
@@ -25,6 +25,9 @@ npm run dev
 ```bash
 # Full application via Docker
 docker-compose up -d
+
+# Or use deployment script
+./deploy.sh
 ```
 
 ### Frontend Commands
@@ -32,6 +35,13 @@ docker-compose up -d
 npm run build    # Production build
 npm run preview  # Preview production build
 npm run lint     # Run ESLint
+```
+
+### Testing
+```bash
+# Backend API validation
+cd backend
+python test_endpoints.py
 ```
 
 ## Architecture
@@ -45,6 +55,8 @@ npm run lint     # Run ESLint
   - yt-dlp integration with automatic updates
   - Concurrent download management with semaphores
   - Static file serving for production frontend
+  - Redis/Celery integration for task management
+  - Security middleware in `security_config.py`
 
 ### Frontend (`/frontend`)
 - **Framework**: React 18 + TypeScript + Vite
@@ -53,6 +65,7 @@ npm run lint     # Run ESLint
 - **API Client**: Axios-based in `src/api/index.ts`
 - **WebSocket**: Custom hook in `src/hooks/useWebSocket.ts`
 - **Types**: Comprehensive TypeScript definitions in `src/types/index.ts`
+- **i18n**: German/English support in `src/i18n/locales/`
 
 ### Communication Flow
 1. Frontend makes API calls to backend via Vite proxy (dev) or direct (prod)
@@ -64,19 +77,30 @@ npm run lint     # Run ESLint
 
 - Use async/await throughout backend code
 - Follow existing Material-UI component patterns in frontend
-- Maintain TypeScript strict mode compliance
+- Maintain TypeScript compliance (note: strict mode currently disabled)
 - WebSocket messages follow established format in `types/index.ts`
 - Environment variables for configuration (see Docker Compose for examples)
+- Rate limiting configured at 100 requests/60 seconds
+- Path traversal protection implemented in download paths
 
-## Testing
+## Docker Configuration
 
-Currently no test suite implemented. When adding tests:
-- Backend: Use FastAPI's test client
-- Frontend: Consider Jest + React Testing Library setup
+- **Development**: `docker-compose.yml` - Single service with Redis
+- **Production**: `docker-compose.prod.yml` - Includes Nginx, SSL support
+- **Volumes**: `/downloads` and `/config` for persistent data
+- **Concurrent Downloads**: 3 (dev) / 5 (prod)
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/docker-publish.yml`) handles:
+- Multi-platform builds (amd64, arm64)
+- Automated Docker Hub deployment
+- Branch and tag-based deployments
 
 ## Security Considerations
 
-- Input validation implemented for URLs and paths
-- Path traversal protection in place
-- Rate limiting configured
-- CORS currently allows all origins (review for production)
+- Security headers middleware configured
+- Input validation for URLs and paths
+- Rate limiting enabled
+- CORS configuration (review for production)
+- Trusted host middleware active

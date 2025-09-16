@@ -45,6 +45,12 @@ export interface FfmpegDownloadInfo {
   package_manager: string | null;
 }
 
+export interface YtdlpDownloadInfo {
+  url: string;
+  instructions: string;
+  package_manager: string | null;
+}
+
 export interface ServerConfig {
   ffmpeg_available: boolean;
   ffmpeg_version: string;
@@ -54,6 +60,8 @@ export interface ServerConfig {
   active_downloads: number;
   ytdl_auto_update: boolean;
   ytdlp_updates_available: boolean;
+  ytdlp_available?: boolean;
+  ytdlp_download_info?: YtdlpDownloadInfo;
   proxy: boolean;
   download_dir: string;
   output_template: string;

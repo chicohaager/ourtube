@@ -695,7 +695,7 @@ def get_ffmpeg_version():
 def get_ffmpeg_download_url():
     """Get platform-specific FFmpeg download URL and instructions"""
     system = sys.platform
-    
+
     if system == 'win32':
         return {
             "url": "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
@@ -711,7 +711,7 @@ def get_ffmpeg_download_url():
     elif system == 'linux':
         # Try to detect the Linux distribution
         distro_info = {"instructions": "Install using your package manager", "package_manager": None}
-        
+
         if os.path.exists('/etc/debian_version'):
             distro_info["package_manager"] = "sudo apt install ffmpeg"
         elif os.path.exists('/etc/redhat-release'):
@@ -720,7 +720,7 @@ def get_ffmpeg_download_url():
             distro_info["package_manager"] = "sudo pacman -S ffmpeg"
         elif os.path.exists('/etc/SUSE-brand'):
             distro_info["package_manager"] = "sudo zypper install ffmpeg"
-        
+
         distro_info["url"] = "https://ffmpeg.org/download.html#build-linux"
         return distro_info
     else:
@@ -728,6 +728,44 @@ def get_ffmpeg_download_url():
             "url": "https://ffmpeg.org/download.html",
             "instructions": "Visit the FFmpeg download page for your platform",
             "package_manager": None
+        }
+
+def get_ytdlp_download_url():
+    """Get platform-specific yt-dlp download URL and instructions"""
+    system = sys.platform
+
+    if system == 'win32':
+        return {
+            "url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
+            "instructions": "Download the executable and place it in your system PATH or the same directory as this application",
+            "package_manager": "pip install yt-dlp"
+        }
+    elif system == 'darwin':  # macOS
+        return {
+            "url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos",
+            "instructions": "Install via Homebrew: brew install yt-dlp or use pip: pip install yt-dlp",
+            "package_manager": "brew install yt-dlp"
+        }
+    elif system == 'linux':
+        # Try to detect the Linux distribution
+        distro_info = {"instructions": "Install using pip or your package manager", "package_manager": "pip install yt-dlp"}
+
+        if os.path.exists('/etc/debian_version'):
+            distro_info["package_manager"] = "sudo apt install yt-dlp"
+        elif os.path.exists('/etc/redhat-release'):
+            distro_info["package_manager"] = "pip install yt-dlp"
+        elif os.path.exists('/etc/arch-release'):
+            distro_info["package_manager"] = "sudo pacman -S yt-dlp"
+        elif os.path.exists('/etc/SUSE-brand'):
+            distro_info["package_manager"] = "pip install yt-dlp"
+
+        distro_info["url"] = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp"
+        return distro_info
+    else:
+        return {
+            "url": "https://github.com/yt-dlp/yt-dlp/releases/latest",
+            "instructions": "Visit the yt-dlp releases page for your platform or install via pip: pip install yt-dlp",
+            "package_manager": "pip install yt-dlp"
         }
 
 async def check_ytdlp_updates():
@@ -833,6 +871,9 @@ async def get_config():
     ffmpeg_updates_available = await check_ffmpeg_updates() if FFMPEG_AVAILABLE else False
     ytdlp_updates_available = await check_ytdlp_updates()
     
+    ytdlp_version = get_ytdlp_version()
+    ytdlp_available = ytdlp_version != "Not installed"
+
     config = {
         "ffmpeg_available": FFMPEG_AVAILABLE,
         "ffmpeg_version": get_ffmpeg_version(),
@@ -841,18 +882,23 @@ async def get_config():
         "active_downloads": active_downloads,
         "ytdl_auto_update": ENABLE_YTDL_UPDATE,
         "ytdlp_updates_available": ytdlp_updates_available,
+        "ytdlp_available": ytdlp_available,
         "proxy": PROXY is not None,
         "download_dir": DOWNLOAD_DIR,
         "output_template": OUTPUT_TEMPLATE,
         "supported_sites": "YouTube and 1000+ other sites via yt-dlp",
-        "ytdlp_version": get_ytdlp_version(),
+        "ytdlp_version": ytdlp_version,
         "platform": sys.platform
     }
-    
+
     # Add FFmpeg download info if not installed
     if not FFMPEG_AVAILABLE:
         config["ffmpeg_download_info"] = get_ffmpeg_download_url()
-    
+
+    # Add yt-dlp download info if not installed
+    if not ytdlp_available:
+        config["ytdlp_download_info"] = get_ytdlp_download_url()
+
     return config
 
 @app.post("/api/update-ytdlp")
