@@ -987,31 +987,46 @@ async def open_download_directory():
     try:
         # Ensure directory exists
         os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-        
+
         # Use absolute path for all platforms
         abs_path = os.path.abspath(DOWNLOAD_DIR)
-        
+
+        # Check if we're in a GUI environment
+        has_display = os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')
+
         if sys.platform == 'win32':
             # Windows: use explorer.exe for better compatibility
-            subprocess.run(['explorer', abs_path], check=False)
+            result = subprocess.run(['explorer', abs_path], check=False, capture_output=True, text=True)
+            if result.returncode != 0:
+                return {"message": f"Cannot open file manager on Windows. Directory: {abs_path}", "path": abs_path}
         elif sys.platform == 'darwin':  # macOS
-            subprocess.run(['open', abs_path], check=False)
+            result = subprocess.run(['open', abs_path], check=False, capture_output=True, text=True)
+            if result.returncode != 0:
+                return {"message": f"Cannot open file manager on macOS. Directory: {abs_path}", "path": abs_path}
         else:  # Linux/Unix
-            # Try multiple methods for Linux
-            try:
-                subprocess.run(['xdg-open', abs_path], check=True)
-            except subprocess.CalledProcessError:
-                # Fallback to other methods
-                for opener in ['gnome-open', 'kde-open', 'nautilus']:
-                    try:
-                        subprocess.run([opener, abs_path], check=True)
-                        break
-                    except (subprocess.CalledProcessError, FileNotFoundError):
-                        continue
-        return {"message": "Download directory opened"}
+            if not has_display:
+                # No GUI available - common in Docker/server environments
+                return {"message": f"File manager not available in headless environment. Directory: {abs_path}", "path": abs_path}
+
+            # Try multiple methods for Linux with GUI
+            opened = False
+            for opener in ['xdg-open', 'gnome-open', 'kde-open', 'nautilus', 'thunar', 'pcmanfm']:
+                try:
+                    result = subprocess.run([opener, abs_path], check=True, capture_output=True, text=True, timeout=5)
+                    opened = True
+                    break
+                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                    continue
+
+            if not opened:
+                return {"message": f"No suitable file manager found. Directory: {abs_path}", "path": abs_path}
+
+        return {"message": "Download directory opened", "path": abs_path}
     except Exception as e:
-        logger.error(f"Failed to open directory: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to open directory: {str(e)}")
+        error_msg = f"Failed to open directory: {str(e)}"
+        logger.error(error_msg)
+        # Don't raise HTTP error, just return the path so user can still access it
+        return {"message": f"Cannot open file manager: {str(e)}. Directory: {os.path.abspath(DOWNLOAD_DIR)}", "path": os.path.abspath(DOWNLOAD_DIR)}
 
 @app.get("/api/browse-directories")
 async def browse_directories(path: str = "/"):

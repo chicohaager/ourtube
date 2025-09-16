@@ -98,8 +98,14 @@ export const StatusBar: React.FC = () => {
 
   const handleOpenFolder = async () => {
     try {
-      await downloadAPI.openDownloadDir();
-      toast.success(t('notifications.folderOpening'));
+      const result = await downloadAPI.openDownloadDir();
+      if (result.path) {
+        toast.success(`${result.message}\n${t('notifications.downloadPath')}: ${result.path}`, {
+          duration: 6000,
+        });
+      } else {
+        toast.success(result.message);
+      }
     } catch (error) {
       toast.error(t('notifications.folderOpenFailed'));
     }

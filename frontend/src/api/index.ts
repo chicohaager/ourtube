@@ -42,7 +42,7 @@ export const downloadAPI = {
   },
 
   openDownloadDir: async () => {
-    const response = await api.post('/open-download-dir');
+    const response = await api.post<{ message: string; path?: string }>('/open-download-dir');
     return response.data;
   },
 
