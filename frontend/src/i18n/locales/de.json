@@ -9,6 +9,8 @@
     "urlPlaceholder": "Video-URL eingeben (YouTube, Vimeo, etc.)",
     "audioOnly": "Nur Audio",
     "audioFormat": "Audio-Format",
+    "playlist": "Playlist herunterladen",
+    "quality": "Qualität",
     "downloadButton": "Herunterladen",
     "downloading": "Lade herunter...",
     "completed": "Abgeschlossen",
@@ -35,9 +37,13 @@
     "completed": "Abgeschlossen",
     "failed": "Fehlgeschlagen",
     "cancelled": "Abgebrochen",
+    "scheduled": "Geplant",
+    "retrying": "Wiederholen",
     "error": "Fehler",
     "started": "Gestartet",
-    "completedAt": "Abgeschlossen"
+    "completedAt": "Abgeschlossen",
+    "scheduledFor": "Geplant für",
+    "retryAttempt": "Wiederholungsversuch"
   },
   "serverStatus": {
     "active": "Aktiv",
@@ -83,7 +89,8 @@
       "loadError": "Fehler beim Laden der Verzeichnisse",
       "hint": "Doppelklicken Sie auf einen Ordner zum Öffnen, einfacher Klick zum Auswählen",
       "cancel": "Abbrechen",
-      "select": "Auswählen"
+      "select": "Auswählen",
+      "selectDrive": "Laufwerk auswählen"
     },
     "ffmpegInstallation": {
       "title": "FFmpeg nicht installiert",
@@ -122,6 +129,50 @@
   "videoInfo": {
     "uploader": "Hochgeladen von",
     "duration": "Dauer"
+  },
+  "advancedOptions": {
+    "title": "Erweiterte Optionen",
+    "preset": "Vorlage",
+    "selectPreset": "Vorlage auswählen",
+    "subtitles": "Untertitel herunterladen",
+    "subtitleLanguage": "Untertitelsprache",
+    "speedLimit": "Geschwindigkeitslimit",
+    "speedLimitHelp": "0 = Unbegrenzt",
+    "unlimited": "Unbegrenzt",
+    "autoRetry": "Automatisch wiederholen bei Fehler",
+    "maxRetries": "Max. Wiederholungen",
+    "scheduleDownload": "Download planen",
+    "scheduledTime": "Geplante Zeit"
+  },
+  "presets": {
+    "bestVideo": "Beste Videoqualität",
+    "mp3Audio": "MP3 Audio",
+    "hdWithSubs": "1080p + Untertitel",
+    "custom": "Benutzerdefiniert",
+    "select": "Vorlage",
+    "enterName": "Vorlagenname eingeben:",
+    "saved": "Vorlage gespeichert!",
+    "saveAsCurrent": "Aktuelle Einstellungen als Vorlage speichern"
+  },
+  "quality": {
+    "best": "Beste Verfügbare",
+    "lowest": "Niedrigste Qualität",
+    "1080p": "1080p HD",
+    "720p": "720p HD",
+    "480p": "480p SD",
+    "360p": "360p",
+    "audio": "Nur Audio"
+  },
+  "settings": {
+    "advanced": "Erweiterte Optionen",
+    "subtitles": "Untertitel herunterladen",
+    "subtitleLang": "Sprache",
+    "allLangs": "Alle Verfügbaren",
+    "speedLimit": "Geschwindigkeitslimit",
+    "unlimited": "Unbegrenzt",
+    "autoRetry": "Automatisch bei Fehler wiederholen",
+    "maxRetries": "Max. Wiederholungen",
+    "scheduleDownload": "Download planen"
   },
   "notifications": {
     "downloadStarted": "Download gestartet",

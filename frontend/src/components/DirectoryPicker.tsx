@@ -38,7 +38,7 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
   open,
   onClose,
   onSelect,
-  currentPath = '/',
+  currentPath = '',
   title
 }) => {
   const { t } = useTranslation();
@@ -86,19 +86,23 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
   };
 
   const getBreadcrumbs = () => {
-    if (!currentDir || currentDir === '/') return [];
+    // Empty currentDir means we're at drive selection (Windows) or root
+    if (!currentDir) return [];
+    if (currentDir === '/') return [];
 
     const parts = currentDir.split(/[/\\]/).filter(Boolean);
     const breadcrumbs = [];
     let path = '';
 
     // Check if this looks like a Windows path (has drive letter)
-    const isWindowsPath = parts.length > 0 && parts[0].match(/^[A-Za-z]:$/);
+    const isWindowsPath = parts.length > 0 && parts[0].match(/^[A-Za-z]:?$/);
 
     if (isWindowsPath) {
+      // Ensure drive letter has colon
+      const driveLetter = parts[0].endsWith(':') ? parts[0] : parts[0] + ':';
       breadcrumbs.push({
-        label: parts[0],
-        path: parts[0] + '\\'
+        label: driveLetter,
+        path: driveLetter + '\\'
       });
       parts.shift();
       path = breadcrumbs[0].path;
@@ -139,19 +143,19 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
             <Link
               component="button"
               variant="body2"
-              onClick={() => loadDirectories('/')}
+              onClick={() => loadDirectories('')}
               sx={{ display: 'flex', alignItems: 'center' }}
             >
               <HomeIcon sx={{ mr: 0.5 }} fontSize="inherit" />
-              Root
+              {currentDir === '' ? t('dialogs.directoryPicker.selectDrive') : 'Root'}
             </Link>
-            {getBreadcrumbs().slice(1).map((crumb, index) => (
+            {getBreadcrumbs().map((crumb, index) => (
               <Link
                 key={index}
                 component="button"
                 variant="body2"
                 onClick={() => loadDirectories(crumb.path)}
-                color={index === getBreadcrumbs().length - 2 ? 'text.primary' : 'inherit'}
+                color={index === getBreadcrumbs().length - 1 ? 'text.primary' : 'inherit'}
               >
                 {crumb.label}
               </Link>

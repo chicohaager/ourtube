@@ -36,27 +36,30 @@ active_downloads = 0
 download_semaphore = asyncio.Semaphore(MAX_CONCURRENT_DOWNLOADS)
 
 def sanitize_filename(filename: str, max_length: int = 255) -> str:
-    """Sanitize filename to be safe for all operating systems"""
+    """Sanitize filename to be safe for all operating systems.
+
+    Always uses Windows-compatible rules since files may be accessed
+    via network shares or volume mounts from Windows clients.
+    """
     # Remove or replace invalid characters
+    # Always use Windows rules for maximum compatibility
     # Windows reserved characters: < > : " / \ | ? *
-    # Unix/Linux mainly just null and /
-    invalid_chars = r'[<>:"|?*\/\x00-\x1f]' if sys.platform == 'win32' else r'[/\x00]'
+    invalid_chars = r'[<>:"|?*\/\\\x00-\x1f]'
     filename = re.sub(invalid_chars, '_', filename)
-    
+
     # Remove leading/trailing dots and spaces (Windows doesn't like these)
     filename = filename.strip('. ')
-    
-    # Windows reserved names
-    if sys.platform == 'win32':
-        reserved_names = [
-            'CON', 'PRN', 'AUX', 'NUL',
-            'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
-            'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
-        ]
-        name_without_ext = filename.split('.')[0].upper()
-        if name_without_ext in reserved_names:
-            filename = f"_{filename}"
-    
+
+    # Always check Windows reserved names for compatibility
+    reserved_names = [
+        'CON', 'PRN', 'AUX', 'NUL',
+        'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9',
+        'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'
+    ]
+    name_without_ext = filename.split('.')[0].upper()
+    if name_without_ext in reserved_names:
+        filename = f"_{filename}"
+
     # Truncate if too long (accounting for file extension)
     if len(filename) > max_length:
         name, ext = os.path.splitext(filename)
@@ -65,16 +68,37 @@ def sanitize_filename(filename: str, max_length: int = 255) -> str:
             filename = name[:max_name_length] + ext
         else:
             filename = filename[:max_length]
-    
+
     # Fallback if filename is empty after sanitization
     if not filename:
         filename = "download"
-    
+
     return filename
 
-# Simple in-memory cache for video info
+# Simple in-memory cache for video info with size limit
 video_info_cache = {}
 cache_max_age = 3600  # 1 hour
+cache_max_size = 100  # Maximum number of cached entries
+
+def cleanup_video_cache():
+    """Remove expired entries from cache and limit size"""
+    global video_info_cache
+    now = datetime.now().timestamp()
+
+    # Remove expired entries
+    expired_keys = [
+        key for key, (_, timestamp) in video_info_cache.items()
+        if now - timestamp >= cache_max_age
+    ]
+    for key in expired_keys:
+        del video_info_cache[key]
+
+    # If still too large, remove oldest entries
+    if len(video_info_cache) > cache_max_size:
+        sorted_items = sorted(video_info_cache.items(), key=lambda x: x[1][1])
+        items_to_remove = len(video_info_cache) - cache_max_size
+        for key, _ in sorted_items[:items_to_remove]:
+            del video_info_cache[key]
 
 async def update_ytdlp():
     """Update yt-dlp to the latest version"""
@@ -121,6 +145,12 @@ async def periodic_history_save():
         await asyncio.sleep(60)  # Save every minute
         save_download_history()
 
+async def periodic_cache_cleanup():
+    """Periodically clean up video info cache"""
+    while True:
+        await asyncio.sleep(300)  # Clean up every 5 minutes
+        cleanup_video_cache()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -138,7 +168,10 @@ async def lifespan(app: FastAPI):
     
     # Start periodic history saves
     asyncio.create_task(periodic_history_save())
-    
+
+    # Start periodic cache cleanup
+    asyncio.create_task(periodic_cache_cleanup())
+
     yield
     
     # Shutdown
@@ -147,15 +180,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="OurTube", version="1.0.0", lifespan=lifespan)
 
-# Check if ffmpeg is available
+# ffmpeg availability is checked async on startup via lifespan
 FFMPEG_AVAILABLE = False
-try:
-    subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
-    FFMPEG_AVAILABLE = True
-except (subprocess.CalledProcessError, FileNotFoundError):
-    print("WARNING: ffmpeg not found. Some video formats may not be downloadable.")
-    print("Audio-only downloads (MP3) will not work without ffmpeg.")
-    print("To install ffmpeg: sudo apt install ffmpeg")
 
 app.add_middleware(
     CORSMiddleware,
@@ -178,11 +204,18 @@ class DownloadRequest(BaseModel):
     proxy: Optional[str] = None  # Override global proxy
     video_format_id: Optional[str] = None  # Specific video format
     audio_format_id: Optional[str] = None  # Specific audio format
+    # New features
+    subtitles: Optional[bool] = False  # Download subtitles
+    subtitle_lang: Optional[str] = "en"  # Subtitle language
+    speed_limit: Optional[int] = None  # Speed limit in KB/s
+    scheduled_time: Optional[str] = None  # ISO datetime for scheduling
+    auto_retry: Optional[bool] = True  # Auto-retry on failure
+    max_retries: Optional[int] = 3  # Maximum retry attempts
 
 class DownloadStatus(BaseModel):
     id: str
     url: str
-    status: str
+    status: str  # queued, downloading, processing, completed, failed, cancelled, scheduled, retrying
     progress: Optional[float] = 0
     filename: Optional[str] = None
     error: Optional[str] = None
@@ -190,6 +223,10 @@ class DownloadStatus(BaseModel):
     eta: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    # New features
+    scheduled_time: Optional[datetime] = None
+    retry_count: Optional[int] = 0
+    max_retries: Optional[int] = 3
 
 class ConnectionManager:
     def __init__(self):
@@ -264,14 +301,37 @@ def save_download_history():
     except Exception as e:
         logger.error(f"Failed to save download history: {e}")
 
+class DownloadCancelled(Exception):
+    """Exception raised when a download is cancelled"""
+    pass
+
 class DownloadProgress:
     def __init__(self, download_id: str, loop=None):
         self.download_id = download_id
         self.loop = loop
 
     def __call__(self, d):
+        # Check if download was cancelled
+        if self.download_id in downloads and downloads[self.download_id].status == 'cancelled':
+            raise DownloadCancelled(f"Download {self.download_id} was cancelled by user")
+
         if d['status'] == 'downloading':
-            progress = d.get('downloaded_bytes', 0) / d.get('total_bytes', 1) * 100
+            # Handle fragmented downloads where total_bytes may be None or estimated
+            total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
+            downloaded = d.get('downloaded_bytes', 0)
+
+            # Calculate progress safely, capped at 100%
+            if total > 0 and downloaded >= 0:
+                progress = min(100.0, (downloaded / total) * 100)
+            else:
+                # Fallback: use fragment info if available
+                fragment_index = d.get('fragment_index', 0)
+                fragment_count = d.get('fragment_count', 0)
+                if fragment_count > 0:
+                    progress = (fragment_index / fragment_count) * 100
+                else:
+                    progress = 0
+
             downloads[self.download_id].progress = progress
             
             # Extract speed and ETA from yt-dlp
@@ -462,69 +522,171 @@ def get_ydl_opts(request: DownloadRequest, download_id: str, loop=None):
             opts.update(custom_args)
         except json.JSONDecodeError:
             logger.error("Invalid custom_args JSON")
-    
+
+    # Add subtitle support
+    if request.subtitles:
+        opts['writesubtitles'] = True
+        opts['writeautomaticsub'] = True  # Also get auto-generated subs
+        if request.subtitle_lang and request.subtitle_lang != 'all':
+            opts['subtitleslangs'] = [request.subtitle_lang]
+        else:
+            opts['subtitleslangs'] = ['all']
+        opts['subtitlesformat'] = 'srt/vtt/best'
+
+    # Add speed limit support (convert KB/s to bytes/s)
+    if request.speed_limit and request.speed_limit > 0:
+        opts['ratelimit'] = request.speed_limit * 1024
+
     return opts
 
 @app.post("/api/download")
 async def create_download(request: DownloadRequest):
     download_id = str(uuid.uuid4())
-    
+
+    # Handle scheduled downloads
+    scheduled_time = None
+    initial_status = "queued"
+    if request.scheduled_time:
+        try:
+            scheduled_time = datetime.fromisoformat(request.scheduled_time.replace('Z', '+00:00'))
+            if scheduled_time > datetime.now(scheduled_time.tzinfo if scheduled_time.tzinfo else None):
+                initial_status = "scheduled"
+        except ValueError:
+            logger.warning(f"Invalid scheduled_time format: {request.scheduled_time}")
+
     download_status = DownloadStatus(
         id=download_id,
         url=str(request.url),
-        status="queued",
-        created_at=datetime.now()
+        status=initial_status,
+        created_at=datetime.now(),
+        scheduled_time=scheduled_time,
+        max_retries=request.max_retries or 3,
+        retry_count=0
     )
     downloads[download_id] = download_status
-    
-    asyncio.create_task(process_download(download_id, request))
-    
-    return {"download_id": download_id, "status": "queued"}
+
+    if initial_status == "scheduled":
+        asyncio.create_task(schedule_download(download_id, request, scheduled_time))
+    else:
+        asyncio.create_task(process_download(download_id, request))
+
+    return {"download_id": download_id, "status": initial_status}
+
+async def schedule_download(download_id: str, request: DownloadRequest, scheduled_time: datetime):
+    """Wait until scheduled time and then start the download"""
+    now = datetime.now(scheduled_time.tzinfo if scheduled_time.tzinfo else None)
+    wait_seconds = (scheduled_time - now).total_seconds()
+
+    if wait_seconds > 0:
+        logger.info(f"Download {download_id} scheduled for {scheduled_time}, waiting {wait_seconds:.0f} seconds")
+        await asyncio.sleep(wait_seconds)
+
+    # Check if download was cancelled while waiting
+    if download_id in downloads and downloads[download_id].status == "scheduled":
+        downloads[download_id].status = "queued"
+        await manager.broadcast({
+            "type": "status",
+            "download_id": download_id,
+            "status": "queued"
+        })
+        await process_download(download_id, request)
 
 async def process_download(download_id: str, request: DownloadRequest):
     global active_downloads
-    
+
     async with download_semaphore:  # Limit concurrent downloads
         try:
             active_downloads += 1
-            
+
+            # Check if already cancelled before starting
+            if downloads[download_id].status == 'cancelled':
+                logger.info(f"Download {download_id} was cancelled before starting")
+                return
+
             downloads[download_id].status = "downloading"
             await manager.broadcast({
                 "type": "status",
                 "download_id": download_id,
                 "status": "downloading"
             })
-            
+
             loop = asyncio.get_event_loop()
             ydl_opts = get_ydl_opts(request, download_id, loop)
-            
+
             await loop.run_in_executor(None, download_with_ydl, str(request.url), ydl_opts, download_id)
-            
+
+            # Check if cancelled during download
+            if downloads[download_id].status == 'cancelled':
+                logger.info(f"Download {download_id} was cancelled during processing")
+                await manager.broadcast({
+                    "type": "status",
+                    "download_id": download_id,
+                    "status": "cancelled"
+                })
+                return
+
             downloads[download_id].status = "completed"
             downloads[download_id].completed_at = datetime.now()
             downloads[download_id].progress = 100
-            
+
             await manager.broadcast({
                 "type": "completed",
                 "download_id": download_id,
                 "filename": downloads[download_id].filename
             })
-            
+
             # Save history after successful download
             save_download_history()
-            
-        except Exception as e:
-            downloads[download_id].status = "failed"
-            downloads[download_id].error = str(e)
+
+        except DownloadCancelled:
+            # Download was cancelled by user - this is expected behavior
+            logger.info(f"Download {download_id} cancelled by user")
+            downloads[download_id].status = "cancelled"
             await manager.broadcast({
-                "type": "error",
+                "type": "status",
                 "download_id": download_id,
-                "error": str(e)
+                "status": "cancelled"
             })
-            
+            save_download_history()
+
+        except Exception as e:
+            # Only mark as failed if not already cancelled
+            if downloads[download_id].status != 'cancelled':
+                # Check if we should auto-retry
+                current_retry = downloads[download_id].retry_count or 0
+                max_retries = downloads[download_id].max_retries or 0
+
+                if request.auto_retry and current_retry < max_retries:
+                    # Retry the download
+                    downloads[download_id].retry_count = current_retry + 1
+                    downloads[download_id].status = "retrying"
+                    logger.info(f"Download {download_id} failed, retrying ({current_retry + 1}/{max_retries}): {e}")
+
+                    await manager.broadcast({
+                        "type": "status",
+                        "download_id": download_id,
+                        "status": "retrying",
+                        "retry_count": current_retry + 1,
+                        "max_retries": max_retries
+                    })
+
+                    # Wait a bit before retrying
+                    active_downloads -= 1
+                    await asyncio.sleep(5)  # Wait 5 seconds before retry
+                    asyncio.create_task(process_download(download_id, request))
+                    return
+                else:
+                    downloads[download_id].status = "failed"
+                    downloads[download_id].error = str(e)
+                    await manager.broadcast({
+                        "type": "error",
+                        "download_id": download_id,
+                        "error": str(e)
+                    })
+
             # Save history after failed download too
             save_download_history()
-            
+
         finally:
             active_downloads -= 1
 
@@ -594,8 +756,11 @@ async def get_video_info(url: str):
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
-                'extract_flat': True,  # This is the key for speed
-                'force_generic_extractor': False,
+                'extract_flat': 'in_playlist',  # Fast extraction
+                'skip_download': True,
+                'no_color': True,
+                'socket_timeout': 10,
+                'ignoreerrors': True,
             }
             
             loop = asyncio.get_event_loop()
@@ -624,8 +789,11 @@ async def get_video_info(url: str):
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
-                'extract_flat': True,
-                'socket_timeout': 5,
+                'extract_flat': 'in_playlist',
+                'skip_download': True,
+                'no_color': True,
+                'socket_timeout': 10,
+                'ignoreerrors': True,
             }
             
             loop = asyncio.get_event_loop()
@@ -995,10 +1163,19 @@ async def open_download_directory():
         has_display = os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY')
 
         if sys.platform == 'win32':
-            # Windows: use explorer.exe for better compatibility
-            result = subprocess.run(['explorer', abs_path], check=False, capture_output=True, text=True)
-            if result.returncode != 0:
-                return {"message": f"Cannot open file manager on Windows. Directory: {abs_path}", "path": abs_path}
+            # Windows: use os.startfile() for reliable folder opening
+            try:
+                os.startfile(abs_path)
+                return {"message": "Download directory opened", "path": abs_path}
+            except OSError as e:
+                # Fallback to explorer.exe with proper path formatting
+                try:
+                    # Normalize path separators for Windows
+                    win_path = abs_path.replace('/', '\\')
+                    subprocess.run(['explorer.exe', win_path], check=False, capture_output=True)
+                    return {"message": "Download directory opened", "path": abs_path}
+                except Exception:
+                    return {"message": f"Cannot open file manager on Windows. Directory: {abs_path}", "path": abs_path}
         elif sys.platform == 'darwin':  # macOS
             result = subprocess.run(['open', abs_path], check=False, capture_output=True, text=True)
             if result.returncode != 0:
@@ -1010,7 +1187,7 @@ async def open_download_directory():
 
             # Try multiple methods for Linux with GUI
             opened = False
-            for opener in ['xdg-open', 'gnome-open', 'kde-open', 'nautilus', 'thunar', 'pcmanfm']:
+            for opener in ['xdg-open', 'gnome-open', 'kde-open', 'nautilus', 'thunar', 'pcmanfm', 'dolphin', 'nemo']:
                 try:
                     result = subprocess.run([opener, abs_path], check=True, capture_output=True, text=True, timeout=5)
                     opened = True
@@ -1029,30 +1206,39 @@ async def open_download_directory():
         return {"message": f"Cannot open file manager: {str(e)}. Directory: {os.path.abspath(DOWNLOAD_DIR)}", "path": os.path.abspath(DOWNLOAD_DIR)}
 
 @app.get("/api/browse-directories")
-async def browse_directories(path: str = "/"):
+async def browse_directories(path: str = ""):
     """Browse directories for directory picker"""
     try:
+        # Handle empty path or root indicators
+        if not path or path in ['/', '\\', '.']:
+            if sys.platform == 'win32':
+                # Windows: Return list of available drives
+                import string
+                drives = []
+                for drive in string.ascii_uppercase:
+                    drive_path = f"{drive}:\\"
+                    if os.path.exists(drive_path):
+                        drives.append({
+                            "name": f"{drive}:",
+                            "path": drive_path,
+                            "isDirectory": True,
+                            "isRoot": True
+                        })
+                return {"directories": drives, "currentPath": ""}
+            else:
+                # Unix/Linux/Mac: Start at root
+                path = "/"
+
         # Security: Normalize and validate path
         path = os.path.normpath(path)
 
-        # On Windows, if no path is provided, start with root drives
-        if sys.platform == 'win32' and path in ['/', '\\']:
-            import string
-            drives = []
-            for drive in string.ascii_uppercase:
-                drive_path = f"{drive}:\\"
-                if os.path.exists(drive_path):
-                    drives.append({
-                        "name": f"{drive}:",
-                        "path": drive_path,
-                        "isDirectory": True,
-                        "isRoot": True
-                    })
-            return {"directories": drives, "currentPath": ""}
+        # Handle Windows drive letters (e.g., "C:" without backslash)
+        if sys.platform == 'win32' and len(path) == 2 and path[1] == ':':
+            path = path + '\\'
 
         # Check if path exists and is accessible
         if not os.path.exists(path):
-            raise HTTPException(status_code=404, detail="Path not found")
+            raise HTTPException(status_code=404, detail=f"Path not found: {path}")
 
         if not os.path.isdir(path):
             raise HTTPException(status_code=400, detail="Path is not a directory")
@@ -1061,10 +1247,23 @@ async def browse_directories(path: str = "/"):
 
         # Add parent directory option (except for root)
         parent_path = os.path.dirname(path)
-        if path != parent_path and parent_path:
+        is_root = (
+            path == '/' or
+            (sys.platform == 'win32' and len(path) <= 3 and path[1:2] == ':')
+        )
+
+        if not is_root and parent_path and parent_path != path:
             directories.append({
                 "name": "..",
                 "path": parent_path,
+                "isDirectory": True,
+                "isParent": True
+            })
+        elif sys.platform == 'win32' and is_root:
+            # On Windows root drive, add option to go back to drive list
+            directories.append({
+                "name": "..",
+                "path": "",
                 "isDirectory": True,
                 "isParent": True
             })
@@ -1073,14 +1272,18 @@ async def browse_directories(path: str = "/"):
         try:
             for item in sorted(os.listdir(path)):
                 item_path = os.path.join(path, item)
-                if os.path.isdir(item_path):
-                    # Skip hidden directories (starting with .)
-                    if not item.startswith('.'):
-                        directories.append({
-                            "name": item,
-                            "path": item_path,
-                            "isDirectory": True
-                        })
+                try:
+                    if os.path.isdir(item_path):
+                        # Skip hidden directories (starting with .)
+                        if not item.startswith('.'):
+                            directories.append({
+                                "name": item,
+                                "path": item_path,
+                                "isDirectory": True
+                            })
+                except (PermissionError, OSError):
+                    # Skip directories we can't access
+                    continue
         except PermissionError:
             # If we can't read the directory, return what we have
             pass
@@ -1090,6 +1293,8 @@ async def browse_directories(path: str = "/"):
             "currentPath": path
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Directory browse error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to browse directory: {str(e)}")
