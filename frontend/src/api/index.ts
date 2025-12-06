@@ -46,7 +46,7 @@ export const downloadAPI = {
     return response.data;
   },
 
-  browseDirectories: async (path: string = '/') => {
+  browseDirectories: async (path: string = '') => {
     const response = await api.get<DirectoryBrowseResponse>('/browse-directories', { params: { path } });
     return response.data;
   },

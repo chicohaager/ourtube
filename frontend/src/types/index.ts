@@ -5,12 +5,19 @@ export interface DownloadRequest {
   playlist?: boolean;
   output_dir?: string;
   audio_format?: 'mp3' | 'flac' | 'ogg' | 'm4a' | 'wav' | 'aac' | 'opus';
+  // New features
+  subtitles?: boolean;
+  subtitle_lang?: string;
+  speed_limit?: number; // in KB/s, 0 = unlimited
+  scheduled_time?: string; // ISO datetime string
+  auto_retry?: boolean;
+  max_retries?: number;
 }
 
 export interface DownloadStatus {
   id: string;
   url: string;
-  status: 'queued' | 'downloading' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  status: 'queued' | 'downloading' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'scheduled' | 'retrying';
   progress?: number;
   filename?: string;
   error?: string;
@@ -18,6 +25,10 @@ export interface DownloadStatus {
   eta?: string;
   created_at: string;
   completed_at?: string;
+  // New features
+  scheduled_time?: string;
+  retry_count?: number;
+  max_retries?: number;
 }
 
 export interface VideoInfo {
@@ -81,4 +92,27 @@ export interface DirectoryItem {
 export interface DirectoryBrowseResponse {
   directories: DirectoryItem[];
   currentPath: string;
+}
+
+// Download preset/template for favorites
+export interface DownloadPreset {
+  id: string;
+  name: string;
+  quality: string;
+  audio_only: boolean;
+  audio_format?: string;
+  subtitles: boolean;
+  subtitle_lang: string;
+  speed_limit: number;
+  auto_retry: boolean;
+  max_retries: number;
+}
+
+// App settings stored in localStorage
+export interface AppSettings {
+  darkMode: boolean;
+  notificationsEnabled: boolean;
+  defaultPreset?: string;
+  maxConcurrentDownloads: number;
+  presets: DownloadPreset[];
 }

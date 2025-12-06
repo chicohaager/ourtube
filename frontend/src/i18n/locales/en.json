@@ -9,6 +9,8 @@
     "urlPlaceholder": "Enter video URL (YouTube, Vimeo, etc.)",
     "audioOnly": "Audio only",
     "audioFormat": "Audio Format",
+    "playlist": "Download Playlist",
+    "quality": "Quality",
     "downloadButton": "Download",
     "downloading": "Downloading...",
     "completed": "Completed",
@@ -35,9 +37,13 @@
     "completed": "Completed",
     "failed": "Failed",
     "cancelled": "Cancelled",
+    "scheduled": "Scheduled",
+    "retrying": "Retrying",
     "error": "Error",
     "started": "Started",
-    "completedAt": "Completed"
+    "completedAt": "Completed",
+    "scheduledFor": "Scheduled for",
+    "retryAttempt": "Retry attempt"
   },
   "serverStatus": {
     "active": "Active",
@@ -83,7 +89,8 @@
       "loadError": "Error loading directories",
       "hint": "Double-click to open folder, single click to select",
       "cancel": "Cancel",
-      "select": "Select"
+      "select": "Select",
+      "selectDrive": "Select Drive"
     },
     "ffmpegInstallation": {
       "title": "FFmpeg Not Installed",
@@ -122,6 +129,50 @@
   "videoInfo": {
     "uploader": "Uploader",
     "duration": "Duration"
+  },
+  "advancedOptions": {
+    "title": "Advanced Options",
+    "preset": "Preset",
+    "selectPreset": "Select a preset",
+    "subtitles": "Download Subtitles",
+    "subtitleLanguage": "Subtitle Language",
+    "speedLimit": "Speed Limit",
+    "speedLimitHelp": "0 = Unlimited",
+    "unlimited": "Unlimited",
+    "autoRetry": "Auto-retry on failure",
+    "maxRetries": "Max Retries",
+    "scheduleDownload": "Schedule Download",
+    "scheduledTime": "Scheduled Time"
+  },
+  "presets": {
+    "bestVideo": "Best Video",
+    "mp3Audio": "MP3 Audio",
+    "hdWithSubs": "1080p + Subtitles",
+    "custom": "Custom",
+    "select": "Preset",
+    "enterName": "Enter preset name:",
+    "saved": "Preset saved!",
+    "saveAsCurrent": "Save current settings as preset"
+  },
+  "quality": {
+    "best": "Best Available",
+    "lowest": "Lowest Quality",
+    "1080p": "1080p HD",
+    "720p": "720p HD",
+    "480p": "480p SD",
+    "360p": "360p",
+    "audio": "Audio Only"
+  },
+  "settings": {
+    "advanced": "Advanced Options",
+    "subtitles": "Download Subtitles",
+    "subtitleLang": "Language",
+    "allLangs": "All Available",
+    "speedLimit": "Speed Limit",
+    "unlimited": "Unlimited",
+    "autoRetry": "Auto-Retry on Failure",
+    "maxRetries": "Max Retries",
+    "scheduleDownload": "Schedule Download"
   },
   "notifications": {
     "downloadStarted": "Download started",

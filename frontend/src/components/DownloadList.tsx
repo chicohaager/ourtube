@@ -20,6 +20,8 @@ import CloudDownload from '@mui/icons-material/CloudDownload';
 import ClearAll from '@mui/icons-material/ClearAll';
 import Speed from '@mui/icons-material/Speed';
 import Schedule from '@mui/icons-material/Schedule';
+import Refresh from '@mui/icons-material/Refresh';
+import AccessTime from '@mui/icons-material/AccessTime';
 import { format } from 'date-fns';
 import { DownloadStatus } from '../types';
 import { useDownloadStore } from '../store/downloadStore';
@@ -27,23 +29,27 @@ import { downloadAPI } from '../api';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
-const statusIcons = {
+const statusIcons: Record<string, React.ReactNode> = {
   queued: <HourglassEmpty />,
   downloading: <CloudDownload />,
   processing: <CloudDownload />,
   completed: <CheckCircle color="success" />,
   failed: <Error color="error" />,
   cancelled: <Cancel color="warning" />,
+  scheduled: <AccessTime color="info" />,
+  retrying: <Refresh color="warning" />,
 };
 
-const statusColors = {
+const statusColors: Record<string, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
   queued: 'default',
   downloading: 'primary',
   processing: 'primary',
   completed: 'success',
   failed: 'error',
   cancelled: 'warning',
-} as const;
+  scheduled: 'info',
+  retrying: 'warning',
+};
 
 interface DownloadListProps {
   downloads: DownloadStatus[];
@@ -118,7 +124,7 @@ export const DownloadList: React.FC<DownloadListProps> = ({ downloads }) => {
               '&:last-child': { borderBottom: 'none' },
             }}
             secondaryAction={
-              download.status === 'downloading' || download.status === 'queued' ? (
+              ['downloading', 'queued', 'scheduled', 'retrying'].includes(download.status) ? (
                 <Tooltip title={t('queue.cancelDownload')}>
                   <IconButton edge="end" onClick={() => handleCancel(download.id)}>
                     <Cancel />
@@ -194,12 +200,32 @@ export const DownloadList: React.FC<DownloadListProps> = ({ downloads }) => {
                     </Box>
                   )}
                   
+                  {/* Scheduled time info */}
+                  {download.status === 'scheduled' && download.scheduled_time && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                      <Schedule sx={{ fontSize: 16, color: 'info.main' }} />
+                      <Typography variant="body2" color="info.main">
+                        {t('status.scheduledFor')}: {format(new Date(download.scheduled_time), 'PPp')}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Retry info */}
+                  {download.status === 'retrying' && download.retry_count !== undefined && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                      <Refresh sx={{ fontSize: 16, color: 'warning.main' }} />
+                      <Typography variant="body2" color="warning.main">
+                        {t('status.retryAttempt')} {download.retry_count}/{download.max_retries || 3}
+                      </Typography>
+                    </Box>
+                  )}
+
                   {download.error && (
                     <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                       {t('status.error')}: {download.error}
                     </Typography>
                   )}
-                  
+
                   <Typography variant="caption" color="text.secondary">
                     {t('status.started')}: {format(new Date(download.created_at), 'PPp')}
                     {download.completed_at && ` • ${t('status.completedAt')}: ${format(new Date(download.completed_at), 'PPp')}`}
