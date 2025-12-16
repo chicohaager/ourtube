@@ -15,7 +15,10 @@ import logging
 from contextlib import asynccontextmanager
 import sys
 import re
-from security_config import setup_security
+try:
+    from backend.security_config import setup_security
+except ImportError:
+    from security_config import setup_security
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
