@@ -119,6 +119,15 @@ npm run build
 - Node.js 18+
 - ffmpeg (for audio extraction and some video formats)
 
+## Disclaimer
+
+This software is provided for personal use only. Users are solely responsible for ensuring their use complies with:
+- YouTube's Terms of Service and the terms of any other platform used
+- Copyright laws and intellectual property rights
+- All applicable local, national, and international laws and regulations
+
+The developers assume no liability for misuse of this software. Downloading copyrighted content without permission may be illegal in your jurisdiction.
+
 ## License
 
 MIT
