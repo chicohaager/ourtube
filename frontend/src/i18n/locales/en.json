@@ -90,7 +90,11 @@
       "hint": "Double-click to open folder, single click to select",
       "cancel": "Cancel",
       "select": "Select",
-      "selectDrive": "Select Drive"
+      "selectDrive": "Select Drive",
+      "manualInput": "Enter path manually",
+      "manualInputPlaceholder": "e.g. /mnt/media/downloads or D:\\Downloads",
+      "dockerHint": "Running in Docker? Only mounted volumes are visible. Enter the container path manually (e.g. /app/downloads).",
+      "applyManualPath": "Apply"
     },
     "ffmpegInstallation": {
       "title": "FFmpeg Not Installed",

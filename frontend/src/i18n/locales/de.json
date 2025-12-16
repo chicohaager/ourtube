@@ -90,7 +90,11 @@
       "hint": "Doppelklicken Sie auf einen Ordner zum Öffnen, einfacher Klick zum Auswählen",
       "cancel": "Abbrechen",
       "select": "Auswählen",
-      "selectDrive": "Laufwerk auswählen"
+      "selectDrive": "Laufwerk auswählen",
+      "manualInput": "Pfad manuell eingeben",
+      "manualInputPlaceholder": "z.B. /mnt/media/downloads oder D:\\Downloads",
+      "dockerHint": "In Docker? Nur gemountete Volumes sind sichtbar. Geben Sie den Container-Pfad manuell ein (z.B. /app/downloads).",
+      "applyManualPath": "Übernehmen"
     },
     "ffmpegInstallation": {
       "title": "FFmpeg nicht installiert",

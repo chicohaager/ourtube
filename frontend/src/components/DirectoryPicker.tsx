@@ -15,12 +15,16 @@ import {
   CircularProgress,
   Breadcrumbs,
   Link,
+  TextField,
+  Alert,
+  Divider,
 } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ComputerIcon from '@mui/icons-material/Computer';
 import HomeIcon from '@mui/icons-material/Home';
+import InfoIcon from '@mui/icons-material/Info';
 import { downloadAPI } from '../api';
 import { DirectoryItem } from '../types';
 import { useTranslation } from 'react-i18next';
@@ -46,6 +50,7 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
   const [currentDir, setCurrentDir] = useState<string>(currentPath);
   const [loading, setLoading] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string>(currentPath);
+  const [manualPath, setManualPath] = useState<string>('');
 
   const loadDirectories = async (path: string) => {
     setLoading(true);
@@ -83,6 +88,13 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
   const handleConfirm = () => {
     onSelect(selectedPath);
     onClose();
+  };
+
+  const handleManualPathApply = () => {
+    if (manualPath.trim()) {
+      setSelectedPath(manualPath.trim());
+      setManualPath('');
+    }
   };
 
   const getBreadcrumbs = () => {
@@ -137,6 +149,33 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent sx={{ minHeight: 400 }}>
+        {/* Docker Hint */}
+        <Alert severity="info" icon={<InfoIcon />} sx={{ mb: 2 }}>
+          {t('dialogs.directoryPicker.dockerHint')}
+        </Alert>
+
+        {/* Manual Path Input */}
+        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+          <TextField
+            fullWidth
+            size="small"
+            label={t('dialogs.directoryPicker.manualInput')}
+            placeholder={t('dialogs.directoryPicker.manualInputPlaceholder')}
+            value={manualPath}
+            onChange={(e) => setManualPath(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleManualPathApply()}
+          />
+          <Button
+            variant="contained"
+            onClick={handleManualPathApply}
+            disabled={!manualPath.trim()}
+          >
+            {t('dialogs.directoryPicker.applyManualPath')}
+          </Button>
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
         {/* Breadcrumbs */}
         <Box sx={{ mb: 2 }}>
           <Breadcrumbs aria-label="directory breadcrumb">
