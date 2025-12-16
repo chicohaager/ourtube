@@ -93,7 +93,7 @@
       "selectDrive": "Select Drive",
       "manualInput": "Enter path manually",
       "manualInputPlaceholder": "e.g. /mnt/media/downloads or D:\\Downloads",
-      "dockerHint": "Running in Docker? Only mounted volumes are visible. Enter the container path manually (e.g. /app/downloads).",
+      "dockerHint": "Running in Docker/ZimaOS? The download path is configured via volume mounts in docker-compose.yml. Changes here only affect the path inside the container.",
       "applyManualPath": "Apply"
     },
     "ffmpegInstallation": {
