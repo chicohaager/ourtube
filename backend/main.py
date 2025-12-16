@@ -25,6 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration from environment variables
+CONFIG_FILE = os.path.abspath(os.getenv("CONFIG_FILE", "./config/settings.json"))
 DOWNLOAD_DIR = os.path.abspath(os.getenv("DOWNLOAD_DIR", "./downloads"))
 OUTPUT_TEMPLATE = os.getenv("OUTPUT_TEMPLATE", "%(title)s.%(ext)s")
 YTDL_UPDATE_INTERVAL = int(os.getenv("YTDL_UPDATE_INTERVAL", "86400"))  # 24 hours
@@ -34,6 +35,32 @@ YTDL_OPTIONS = os.getenv("YTDL_OPTIONS", None)
 ENABLE_YTDL_UPDATE = os.getenv("ENABLE_YTDL_UPDATE", "true").lower() == "true"
 HISTORY_FILE = os.path.abspath(os.getenv("HISTORY_FILE", "./download_history.json"))
 MAX_HISTORY_SIZE = int(os.getenv("MAX_HISTORY_SIZE", "1000"))
+
+def load_config():
+    """Load configuration from config file"""
+    global DOWNLOAD_DIR
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+                if 'download_dir' in config:
+                    DOWNLOAD_DIR = os.path.abspath(config['download_dir'])
+                    logger.info(f"Loaded download_dir from config: {DOWNLOAD_DIR}")
+    except Exception as e:
+        logger.warning(f"Could not load config file: {e}")
+
+def save_config():
+    """Save configuration to config file"""
+    try:
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        config = {
+            'download_dir': DOWNLOAD_DIR
+        }
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config, f, indent=2)
+        logger.info(f"Saved config to {CONFIG_FILE}")
+    except Exception as e:
+        logger.error(f"Could not save config file: {e}")
 
 # Global variable to track active downloads
 active_downloads = 0
@@ -161,8 +188,10 @@ async def periodic_cache_cleanup():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    # Load saved config (download_dir, etc.)
+    load_config()
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    
+
     # Check ffmpeg availability
     await check_ffmpeg_on_startup()
     
@@ -1162,6 +1191,8 @@ async def set_download_directory(request: DirectoryRequest):
         # Validate directory exists or can be created
         os.makedirs(abs_dir, exist_ok=True)
         DOWNLOAD_DIR = abs_dir
+        # Save to config file for persistence
+        save_config()
         return {"message": "Download directory updated", "download_dir": DOWNLOAD_DIR}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Invalid directory: {str(e)}")
