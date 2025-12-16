@@ -7,7 +7,6 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # ZimaOS paths - all in /DATA/AppData/ourtube/
       - /DATA/AppData/ourtube/downloads:/app/downloads
       - /DATA/AppData/ourtube/config:/app/config
     environment:
@@ -15,8 +14,6 @@ services:
       - MAX_CONCURRENT_DOWNLOADS=4
       - ENABLE_YTDL_UPDATE=true
       - YTDL_UPDATE_INTERVAL=86400
-      - RATE_LIMIT_REQUESTS=100
-      - RATE_LIMIT_WINDOW=60
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/config"]
@@ -24,87 +21,14 @@ services:
       timeout: 15s
       retries: 3
       start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     labels:
-      # ZimaOS CasaOS labels
-      - "org.label-schema.name=OurTube"
-      - "org.label-schema.description=Modern video & audio downloader supporting YouTube and 1000+ sites"
-      - "org.label-schema.url=https://github.com/chicohaager/ourtube"
-      - "org.label-schema.vcs-url=https://github.com/chicohaager/ourtube"
-      - "org.label-schema.version=latest"
-      - "org.label-schema.schema-version=1.0"
       - "casa.app.category=Media"
       - "casa.app.port.web=8000"
-      - "casa.app.title=OurTube Video Downloader"
+      - "casa.app.title=OurTube"
       - "casa.app.index=/"
-      - "casa.app.author=ChicoHaager"
       - "casa.icon=https://raw.githubusercontent.com/chicohaager/ourtube/main/logo-small.png"
-    networks:
-      - ourtube-network
 
-  filebrowser:
-    image: filebrowser/filebrowser:latest
-    container_name: ourtube-filebrowser
-    ports:
-      - "8080:80"
-    volumes:
-      - /DATA/AppData/ourtube/downloads:/srv
-      - /DATA/AppData/ourtube/filebrowser:/database
-    environment:
-      - FB_DATABASE=/database/filebrowser.db
-      - FB_ROOT=/srv
-      - FB_LOG=stdout
-      - FB_NOAUTH=false
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-    labels:
-      - "casa.app.category=Files"
-      - "casa.app.port.web=8080"
-      - "casa.app.title=OurTube File Browser"
-    networks:
-      - ourtube-network
-
-  # Optional: Watchtower for automatic updates
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: ourtube-watchtower
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=86400
-      - WATCHTOWER_INCLUDE_RESTARTING=true
-      - WATCHTOWER_MONITOR_ONLY=false
-    restart: unless-stopped
-    command: --interval 86400 ourtube ourtube-filebrowser
-    labels:
-      - "casa.app.category=System"
-      - "casa.app.title=OurTube Auto-Updater"
-
-networks:
-  ourtube-network:
-    driver: bridge
-    name: ourtube-network
-
-# ZimaOS Installation Instructions:
-# 1. Save this file as docker-compose.yml in /DATA/AppData/ourtube/
-# 2. Create required directories:
-#    sudo mkdir -p /DATA/AppData/ourtube/{downloads,config,filebrowser}
-# 3. Set permissions:
-#    sudo chown -R 1000:1000 /DATA/AppData/ourtube
-# 4. Run: cd /DATA/AppData/ourtube && docker-compose up -d
-# 5. Access OurTube at: http://your-zima-ip:8000
-# 6. Access File Browser at: http://your-zima-ip:8080 (default: admin/admin)
+# Installation:
+# 1. mkdir -p /DATA/AppData/ourtube/{downloads,config}
+# 2. docker-compose up -d
+# 3. Access: http://your-ip:8000
