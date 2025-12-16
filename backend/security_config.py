@@ -41,23 +41,36 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Simple rate limiting middleware"""
-    
+
     def __init__(self, app):
         super().__init__(app)
         self.requests = defaultdict(list)
-    
+        self.last_cleanup = datetime.now()
+        self.cleanup_interval = timedelta(minutes=5)  # Cleanup every 5 minutes
+
     async def dispatch(self, request: Request, call_next):
         # Get client IP
-        client_ip = request.client.host
-        
-        # Clean old requests
+        client_ip = request.client.host if request.client else "unknown"
+
         now = datetime.now()
         cutoff = now - timedelta(seconds=RATE_LIMIT_WINDOW)
+
+        # Clean old requests for this IP
         self.requests[client_ip] = [
             req_time for req_time in self.requests[client_ip]
             if req_time > cutoff
         ]
-        
+
+        # Periodic cleanup of stale IPs to prevent memory leak
+        if now - self.last_cleanup > self.cleanup_interval:
+            stale_ips = [
+                ip for ip, times in self.requests.items()
+                if not times or all(t <= cutoff for t in times)
+            ]
+            for ip in stale_ips:
+                del self.requests[ip]
+            self.last_cleanup = now
+
         # Check rate limit
         if len(self.requests[client_ip]) >= RATE_LIMIT_REQUESTS:
             return Response(
@@ -65,10 +78,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 status_code=429,
                 headers={"Retry-After": str(RATE_LIMIT_WINDOW)}
             )
-        
+
         # Record request
         self.requests[client_ip].append(now)
-        
+
         # Process request
         return await call_next(request)
 

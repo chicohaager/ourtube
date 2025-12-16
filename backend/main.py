@@ -15,6 +15,7 @@ import logging
 from contextlib import asynccontextmanager
 import sys
 import re
+from security_config import setup_security
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -104,7 +105,7 @@ async def update_ytdlp():
     """Update yt-dlp to the latest version"""
     if not ENABLE_YTDL_UPDATE:
         return
-    
+
     try:
         logger.info("Checking for yt-dlp updates...")
         # Try to find the correct Python executable
@@ -112,12 +113,15 @@ async def update_ytdlp():
         result = subprocess.run(
             [python_exec, "-m", "pip", "install", "--upgrade", "yt-dlp"],
             capture_output=True,
-            text=True
+            text=True,
+            timeout=120  # 2 minute timeout for pip install
         )
         if "Successfully installed" in result.stdout:
             logger.info("yt-dlp updated successfully")
         else:
             logger.info("yt-dlp is already up to date")
+    except subprocess.TimeoutExpired:
+        logger.error("yt-dlp update timed out")
     except Exception as e:
         logger.error(f"Failed to update yt-dlp: {e}")
 
@@ -131,10 +135,10 @@ async def check_ffmpeg_on_startup():
     """Check ffmpeg availability on startup"""
     global FFMPEG_AVAILABLE
     try:
-        subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+        subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True, timeout=10)
         FFMPEG_AVAILABLE = True
         logger.info(f"ffmpeg is available. Version: {get_ffmpeg_version()}")
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
         FFMPEG_AVAILABLE = False
         logger.warning("ffmpeg not found. Some video formats may not be downloadable.")
         logger.warning("Audio-only downloads (MP3) will not work without ffmpeg.")
@@ -183,13 +187,8 @@ app = FastAPI(title="OurTube", version="1.0.0", lifespan=lifespan)
 # ffmpeg availability is checked async on startup via lifespan
 FFMPEG_AVAILABLE = False
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Setup security middleware (rate limiting, security headers, CORS)
+setup_security(app)
 
 class DownloadRequest(BaseModel):
     url: HttpUrl
@@ -670,8 +669,7 @@ async def process_download(download_id: str, request: DownloadRequest):
                         "max_retries": max_retries
                     })
 
-                    # Wait a bit before retrying
-                    active_downloads -= 1
+                    # Wait a bit before retrying (don't decrement here - finally block handles it)
                     await asyncio.sleep(5)  # Wait 5 seconds before retry
                     asyncio.create_task(process_download(download_id, request))
                     return
@@ -731,8 +729,11 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+    except Exception as e:
+        logger.debug(f"WebSocket error: {e}")
+        manager.disconnect(websocket)
 
-@app.get("/api/info") 
+@app.get("/api/info")
 async def get_video_info(url: str):
     # Check cache first
     cache_key = url
@@ -741,10 +742,9 @@ async def get_video_info(url: str):
         if datetime.now().timestamp() - timestamp < cache_max_age:
             logger.info(f"Returning cached info for {url}")
             return cached_data
-    
+
     try:
         # For YouTube URLs, extract video ID and use a much faster approach
-        import re
         youtube_regex = r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})'
         match = re.search(youtube_regex, url)
         
@@ -845,7 +845,7 @@ def get_ytdlp_version():
 def get_ffmpeg_version():
     """Get current ffmpeg version"""
     try:
-        result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
+        result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             # Extract version from first line (e.g., "ffmpeg version 4.4.2-0ubuntu0.22.04.1")
             first_line = result.stdout.split('\n')[0]
@@ -856,6 +856,8 @@ def get_ffmpeg_version():
         return "Unknown"
     except FileNotFoundError:
         return "Not installed"
+    except subprocess.TimeoutExpired:
+        return "Timeout checking version"
     except Exception as e:
         logger.error(f"Error getting ffmpeg version: {e}")
         return "Error checking version"
@@ -944,14 +946,17 @@ async def check_ytdlp_updates():
         result = subprocess.run(
             [python_exec, "-m", "pip", "list", "--outdated", "--format=json"],
             capture_output=True,
-            text=True
+            text=True,
+            timeout=30  # 30 second timeout for pip list
         )
         if result.returncode == 0:
-            import json
             outdated_packages = json.loads(result.stdout)
             for package in outdated_packages:
                 if package.get('name') == 'yt-dlp':
                     return True
+        return False
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout checking yt-dlp updates")
         return False
     except Exception as e:
         logger.error(f"Error checking yt-dlp updates: {e}")
@@ -962,19 +967,23 @@ async def check_ffmpeg_updates():
     try:
         # For Linux systems using apt
         if os.path.exists('/usr/bin/apt'):
-            # Update package list
-            subprocess.run(['sudo', '-n', 'apt', 'update'], capture_output=True, check=False)
-            
+            # Update package list (with timeout, non-blocking)
+            subprocess.run(['sudo', '-n', 'apt', 'update'], capture_output=True, check=False, timeout=60)
+
             # Check for updates
             result = subprocess.run(
                 ['apt', 'list', '--upgradable', 'ffmpeg'],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=30
             )
             if 'ffmpeg' in result.stdout and 'upgradable' in result.stdout:
                 return True
-        
+
         # For other systems, we can't easily check for updates
+        return False
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout checking ffmpeg updates")
         return False
     except Exception as e:
         logger.error(f"Error checking ffmpeg updates: {e}")
@@ -984,7 +993,7 @@ async def update_ffmpeg():
     """Update ffmpeg to the latest version"""
     try:
         system = sys.platform
-        
+
         if system == 'linux':
             # Try to update using apt (Ubuntu/Debian)
             if os.path.exists('/usr/bin/apt'):
@@ -992,7 +1001,8 @@ async def update_ffmpeg():
                 result = subprocess.run(
                     ['sudo', '-n', 'apt', 'install', '-y', 'ffmpeg'],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=300  # 5 minute timeout for apt install
                 )
                 if result.returncode == 0:
                     logger.info("ffmpeg updated successfully")
@@ -1001,7 +1011,7 @@ async def update_ffmpeg():
                     return {"success": False, "message": "Failed to update ffmpeg. May require sudo privileges."}
             else:
                 return {"success": False, "message": "Package manager not supported. Please update ffmpeg manually."}
-                
+
         elif system == 'darwin':  # macOS
             # Try using homebrew
             if os.path.exists('/usr/local/bin/brew') or os.path.exists('/opt/homebrew/bin/brew'):
@@ -1009,7 +1019,8 @@ async def update_ffmpeg():
                 result = subprocess.run(
                     ['brew', 'upgrade', 'ffmpeg'],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=300  # 5 minute timeout for brew upgrade
                 )
                 if result.returncode == 0:
                     logger.info("ffmpeg updated successfully")
@@ -1018,13 +1029,16 @@ async def update_ffmpeg():
                     return {"success": False, "message": "Failed to update ffmpeg via homebrew"}
             else:
                 return {"success": False, "message": "Homebrew not found. Please install ffmpeg manually."}
-                
+
         elif system == 'win32':
             return {"success": False, "message": "Windows auto-update not supported. Please download ffmpeg manually from ffmpeg.org"}
-            
+
         else:
             return {"success": False, "message": f"Platform {system} not supported for auto-update"}
-            
+
+    except subprocess.TimeoutExpired:
+        logger.error("ffmpeg update timed out")
+        return {"success": False, "message": "ffmpeg update timed out"}
     except Exception as e:
         logger.error(f"Failed to update ffmpeg: {e}")
         return {"success": False, "message": f"Error updating ffmpeg: {str(e)}"}

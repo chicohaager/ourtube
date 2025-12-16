@@ -13,7 +13,6 @@ import {
 } from '@mui/material';
 import Brightness4 from '@mui/icons-material/Brightness4';
 import Brightness7 from '@mui/icons-material/Brightness7';
-import YouTube from '@mui/icons-material/YouTube';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { DownloadForm } from './components/DownloadForm';
