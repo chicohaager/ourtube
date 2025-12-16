@@ -1002,22 +1002,20 @@ async def check_ytdlp_updates():
 async def check_ffmpeg_updates():
     """Check if ffmpeg has updates available"""
     try:
-        # For Linux systems using apt
-        if os.path.exists('/usr/bin/apt'):
-            # Update package list (with timeout, non-blocking)
-            subprocess.run(['sudo', '-n', 'apt', 'update'], capture_output=True, check=False, timeout=60)
+        # Only check on Linux systems with apt
+        if sys.platform != 'linux' or not os.path.exists('/usr/bin/apt'):
+            return False
 
-            # Check for updates
-            result = subprocess.run(
-                ['apt', 'list', '--upgradable', 'ffmpeg'],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if 'ffmpeg' in result.stdout and 'upgradable' in result.stdout:
-                return True
+        # Check for updates (skip apt update which requires sudo)
+        result = subprocess.run(
+            ['apt', 'list', '--upgradable', 'ffmpeg'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if 'ffmpeg' in result.stdout and 'upgradable' in result.stdout:
+            return True
 
-        # For other systems, we can't easily check for updates
         return False
     except subprocess.TimeoutExpired:
         logger.warning("Timeout checking ffmpeg updates")
