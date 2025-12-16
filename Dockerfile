@@ -7,14 +7,14 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Alpine-based Python for smaller image
-FROM python:3.12-alpine
+# Slim Debian-based Python (stable on ARM64)
+FROM python:3.12-slim
 
-# Install ffmpeg and build dependencies
-RUN apk add --no-cache \
-    ffmpeg \
-    curl \
-    && rm -rf /var/cache/apk/*
+# Install ffmpeg and curl
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -29,15 +29,13 @@ COPY backend/requirements.txt ./backend/
 # Copy frontend build
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
-# Create downloads directory
+# Create directories
 RUN mkdir -p /app/downloads /app/config
 
-# Expose port
 EXPOSE 8000
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/api/config || exit 1
 
-# Start the application
 CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
