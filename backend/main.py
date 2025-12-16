@@ -25,15 +25,20 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration from environment variables
-CONFIG_FILE = os.path.abspath(os.getenv("CONFIG_FILE", "./config/settings.json"))
-DOWNLOAD_DIR = os.path.abspath(os.getenv("DOWNLOAD_DIR", "./downloads"))
+# Use script directory as base for relative paths
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_DEFAULT_CONFIG = os.path.join(_SCRIPT_DIR, "config", "settings.json")
+_DEFAULT_DOWNLOADS = os.path.join(_SCRIPT_DIR, "downloads")
+
+CONFIG_FILE = os.path.abspath(os.getenv("CONFIG_FILE", _DEFAULT_CONFIG))
+DOWNLOAD_DIR = os.path.abspath(os.getenv("DOWNLOAD_DIR", _DEFAULT_DOWNLOADS))
 OUTPUT_TEMPLATE = os.getenv("OUTPUT_TEMPLATE", "%(title)s.%(ext)s")
 YTDL_UPDATE_INTERVAL = int(os.getenv("YTDL_UPDATE_INTERVAL", "86400"))  # 24 hours
 PROXY = os.getenv("PROXY", None)
 MAX_CONCURRENT_DOWNLOADS = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "3"))
 YTDL_OPTIONS = os.getenv("YTDL_OPTIONS", None)
 ENABLE_YTDL_UPDATE = os.getenv("ENABLE_YTDL_UPDATE", "true").lower() == "true"
-HISTORY_FILE = os.path.abspath(os.getenv("HISTORY_FILE", "./download_history.json"))
+HISTORY_FILE = os.path.abspath(os.getenv("HISTORY_FILE", os.path.join(_SCRIPT_DIR, "download_history.json")))
 MAX_HISTORY_SIZE = int(os.getenv("MAX_HISTORY_SIZE", "1000"))
 
 def load_config():
